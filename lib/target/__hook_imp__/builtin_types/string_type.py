@@ -1,5 +1,5 @@
 from defs import *
-from ..builtin_builder import *
+from ..type_value.builtin_builder import *
 import __builtin__
 
 strType = Type('str', [
@@ -48,10 +48,10 @@ strType.rebuild(StringType)
 
 def StringCoerce(left, right):
   value = getRealValue(right)
-  if match(StringType, right):
+  if isinstance(right, StringType):
     if value is not None:
       value = value
-    return (left, FloatType(value))
+    return (left, StringType(value))
   else:
     return NotImplemented
 

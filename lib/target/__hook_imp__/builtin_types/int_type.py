@@ -1,5 +1,5 @@
 from defs import *
-from ..builtin_builder import *
+from ..type_value.builtin_builder import *
 import __builtin__
 
 intTypeBuilder = Type('int', [
@@ -18,7 +18,7 @@ for ops in ['add', 'sub', 'mul', 'div', 'floordiv', 'mod', 'pow',
 #IntType.add_binary_operator('__divmod__', returnType=lambda: (IntType, IntType))
 
 def int_coerce(left, right):
-  if match(IntType, right):
+  if isinstance(right, IntType):
     return (left, right)
   else:
     return NotImplemented

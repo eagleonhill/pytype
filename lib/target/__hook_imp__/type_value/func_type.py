@@ -1,8 +1,8 @@
 import checker
-from type_value import TypeValue, BadType, match, getRealValue, hasRealValue,\
+from base import TypeValue, BadType, getRealValue, hasRealValue,\
     CanBeNone
 
-class FuncValue(TypeValue):
+class FuncValue:
   pass
 
 class InvokePattern:
@@ -55,11 +55,12 @@ class StubFunc(FuncValue):
   def __init__(self, func):
     self.func = func
   def __call__(self, *args, **kargs):
+    return self.func(*args, **kargs)
     try:
       return self.func(*args, **kargs)
     except TypeError as ex:
       print 'Bad internal call!'
-      checker.type_error(e)
+      checker.type_error(self, ex)
       return BadType
 
 class FormatStrParser:
@@ -67,16 +68,15 @@ class FormatStrParser:
   @classmethod
   def setup(cls):
     if cls.mapping == None:
-      import builtin_types as b
+      # TODO: Auto register
+      from ..builtin_types.defs import *
       cls.mapping = {
-          'b': b.BoolType,
-          's': b.StringType,
-          'i': b.IntType,
-          'l': b.IndexType,
-          'f': b.FloatType,
+          'b': BoolType,
+          's': StringType,
+          'i': IntType,
+          'l': IndexType,
+          'f': FloatType,
           't': None,
-          #'o': AnyObject
-          #'O': Object of type
           }
 
   @classmethod
@@ -107,10 +107,8 @@ class FormatStrParser:
       if ch == '|':
         cur = optionaltypes
       elif ch == 't' or ch == 'T':
-        # Not implemented
-        assert False
         # Get a type from args
-        cur.append(cls.getitem(ch)(args[argindex]))
+        cur.append(args[argindex])
         argindex += 1
       else:
         cur.append(cls.getitem(ch))
@@ -145,7 +143,7 @@ class BuiltinFunc(FuncValue):
     for types, optionalTypes, returnType in self.patterns:
       if len(types) < len(args):
         continue
-      check_func = lambda a, b: a is None or match(a, b)
+      check_func = lambda a, b: a is None or isinstance(a, b)
       checked = all(map(check_func, args, types + optionalTypes))
       if checked:
         break;

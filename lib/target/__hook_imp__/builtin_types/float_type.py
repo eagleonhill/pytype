@@ -1,5 +1,5 @@
 from defs import *
-from ..builtin_builder import *
+from ..type_value.builtin_builder import *
 
 floatTypeBuilder = Type('float', [
   Func('__nonzero__', [''], 'b'),
@@ -13,7 +13,9 @@ for ops in ['add', 'sub', 'mul', 'div', 'floordiv', 'mod', 'pow']:
 
 def float_coerce(left, right):
   value = getRealValue(right)
-  if match(FloatType, right) or match(BoolType, right) or match(IntType, right):
+  if isinstance(right, FloatType) or \
+      isinstance(right, IntType) or\
+      isinstance(right, BoolType):
     if value is not None:
       value = float(value)
     return (left, FloatType(value))

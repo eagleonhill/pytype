@@ -1,36 +1,24 @@
-import checker
-
-def match(a, b):
-  return getType(a).match(getType(b))
-
-def getRealValue(x):
-  return x.__value
-
-def hasRealValue(x):
-  return x.__has_value
-
-def getType(x):
-  if isinstance(x, BuiltinObjInstance):
-    return x.__type
-  else:
-    return x
-
-class TypeValue:
-  def match(self, other):
-    return NotImplemented
-
-# Can do everything, contains all attributes, never fails
-class UltimateValue(TypeValue):
-  def __init__(self, fallback = False):
-    pass
-  # TODO
-
-BadType = UltimateValue()
+from base import *
+from .. import checker
 
 # Implementation of type in C
 class BuiltinType(TypeValue):
-  def __init__(self, real_type):
+  def __new__(cls, name, base, defs):
+    orig = defs.get('__new__')
+    def create(cls, *args, **kargs):
+      value = orig(cls, *args, **kargs)
+      if not isinstance(value, BuiltinObjInstance):
+        return BuiltinObjInstance(cls, value)
+      else:
+        return value
+    defs['__new__'] = create
+
+    t = super(BuiltinType, cls).__new__(cls, name, base, defs)
+    return t
+  def __init__(self, name, base, defs):
+    real_type = defs['_' + name + '__real_type']
     self.attr = {}
+    self.base = base
     self.real_type = real_type
 
   def check_value(self, value):
@@ -44,6 +32,8 @@ class BuiltinType(TypeValue):
       return BadType()
 
   def __call__(self, value = None):
+    if isinstance(value, BuiltinObjInstance):
+      value = getRealValue(value)
     return BuiltinObjInstance(self, value)
 
   def __repr__(self):
@@ -67,7 +57,7 @@ class BuiltinType(TypeValue):
     self.get_function(op).add_pattern(args, optionalArgs, returnType)
 
   def get_function(self, op):
-    from func_value import BuiltinFunc
+    from func_type import BuiltinFunc
     if op not in self.attr:
       self.attr[op] = BuiltinFunc(op)
     return self.attr[op]
@@ -76,22 +66,20 @@ class BuiltinType(TypeValue):
     self.get_function(op).add_from_format_str(args, returnType)
 
   def add_stub_function(self, op, func):
-    from func_value import StubFunc
+    from func_type import StubFunc
     self.attr[op] = StubFunc(func)
 
   def match(self, other):
     return self is other
 
-# A helper class for define builtin argument
-class CanBeNone:
-  def __init__(self, t):
-    self.inner = t
-  def match(self, value):
-    if value.__class == NoneType:
+  def __instancecheck__(self, instance):
+    if issubclass(instance.__class__, int):
       return True
-    return self.t.match(value)
+    if not isinstance(instance, BuiltinObjInstance):
+      return False
+    return typeEqual(getType(instance), self)
 
-class BuiltinObjStatic:
+class BuiltinObjStatic(ValueInstance):
   def __init__(self, t):
     self.__type = t
   def __get_type__(self):
@@ -118,11 +106,14 @@ class BuiltinObjStatic:
     return repr((self.__type, self.__value))
       
 # Instance of builtin type, contains no public values
-class BuiltinObjInstance:
+class BuiltinObjInstance(ValueInstance):
   def __init__(self, t, value = None):
+    if isinstance(value, BuiltinObjInstance):
+      value = getRealValue(value)
     assert value == None or t.check_value(value), (t, value)
     self.__type = t
     self.__value = value
+    self.__meta = None
   def __get_type__(self):
     return self.__type
   def __get_value__(self):
@@ -138,7 +129,7 @@ class BuiltinObjInstance:
       return self.__has_value__()
     return self.__get_type_attr(name)
   def __get_type_attr(self, name):
-    from func_value import InstanceFunc, FuncValue
+    from func_type import InstanceFunc, FuncValue
     val = self.__type.get_attr(name)
     if isinstance(val, FuncValue):
       val = InstanceFunc(val, self)
@@ -156,7 +147,7 @@ class BuiltinObjInstance:
       except AttributeError:
         return True
     if hasRealValue(l):
-      return getRealValue(l)
+      return True if getRealValue(l) else False
     import os
     if os.fork():
       return True

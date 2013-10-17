@@ -16,9 +16,9 @@ for ops in ['add', 'sub', 'mul', 'div', 'floordiv', 'mod', 'pow',
 
 def bool_coerce(left, right):
   x = left
-  if match(BoolType, right):
+  if isinstance(right, BoolType):
     return (left, right)
-  elif match(IntType, right):
+  elif isinstance(right, IntType):
     return (left, right)
   return NotImplemented
 

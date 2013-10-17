@@ -1,5 +1,6 @@
-from type_value import BuiltinType, BuiltinObjStatic
-from func_value import BuiltinFunc, InstanceFunc
+from builtin_type import BuiltinType, BuiltinObjStatic
+from func_type import BuiltinFunc, InstanceFunc
+from module import ModuleInst
 
 class Module:
   def __init__(self, real, defs):
@@ -8,21 +9,29 @@ class Module:
     # Should be topmost
     self.name = real.__name__
   def build(self, parent = None):
-    ret = BuiltinType(self.real)
+    defs = {
+        '_hooked_' + self.name + '__real_type': self.real,
+        '__new__': (lambda x: x),
+        }
+    ret = BuiltinType('hooked_' + self.name, (), defs)
     for d in self.defs:
       name = d.name
       value = d.build(self)
       if isinstance(value, BuiltinFunc):
-        value = InstanceFunc(value, BuiltinObjStatic(ret))
-      ret.attr[name] = value
-    return ret
+        value = InstanceFunc(value, ret)
+      setattr(ret, name, value)
+    return ret()
 
 class Type:
   def __init__(self, name, defs):
     self.defs = defs
     self.name = name
   def build(self, parent):
-    ret = BuiltinType(getattr(parent.real, self.name))
+    defs = {
+        '_hooked_' + self.name + '__real_type': getattr(parent.real, self.name),
+        '__new__': (lambda x: x),
+        }
+    ret = BuiltinType('hooked_' + self.name, (), defs)
     self.rebuild(parent, ret)
     return BuiltinObjStatic(ret)
   
@@ -63,6 +72,6 @@ class Value:
     return self.value
 
 def export(globals_, module):
-  for key in module.attr:
-    value = module.attr[key]
+  for key in module.__dict__:
+    value = module.__dict__[key]
     globals_[key] = value

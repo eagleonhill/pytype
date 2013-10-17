@@ -1,5 +1,5 @@
 def __define_module():
-  from ..builtin_builder import *
+  from ..type_value.builtin_builder import *
   from ..builtin_types import *
   import __builtin__
   module = Module(

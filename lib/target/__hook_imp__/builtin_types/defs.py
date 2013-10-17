@@ -1,14 +1,39 @@
-from ..type_value import BuiltinType, match, CanBeNone, getRealValue,\
+from ..type_value import BuiltinType, CanBeNone, getRealValue,\
     hasRealValue
 
-IntType = BuiltinType(int)  # Include int and long
-IndexType = BuiltinType(int)  # Accepts class with __index__
-BoolType = BuiltinType(bool)
-FloatType = BuiltinType(float)
-StringType = BuiltinType(str)
-NotImplementedType = BuiltinType(type(NotImplemented))
-NoneType = BuiltinType(type(None))
+__metaclass__ = BuiltinType
+
+class IntType:  # Include int and long
+  __real_type = int
+  def __new__(cls, val = None, base = 10):
+    return val
+
+class IndexType(IntType):  # Accepts class with __index__
+  __real_type = int
+
+class BoolType(IntType):
+  __real_type = bool
+
+class FloatType:
+  __real_type = float
+  def __new__(cls, val = None, base = 10):
+    return val
+
+class StringType:
+  __real_type = str
+  def __new__(cls, val = None):
+    return val
+
+class NotImplementedType:
+  __real_type = type(NotImplemented)
+
+class NoneType:
+  __real_type = type(None)
+
 NoneType._BuiltinObjInstance__has_value__ = lambda : True
+
+ListType = None
+DictType = None
 
 def NumValue(value):
   if type(value) == float:

@@ -14,6 +14,9 @@ class Visitor(NodeTransformer):
     return self.wrap('NumValue', node)
   def visit_Str(self, node):
     return self.wrap('StringType', node)
+  def visit_List(self, node):
+    self.generic_visit(node)
+    return self.wrap('ListType', node)
 
   def wrap(self, typename, node):
     return copy_location(Call(
@@ -26,6 +29,8 @@ class Visitor(NodeTransformer):
 
 def transform(source, filename):
   root = parse(source, filename)
+  #print dump(root)
   Visitor().visit(root)
   fix_missing_locations(root)
+  #print dump(root)
   return root
