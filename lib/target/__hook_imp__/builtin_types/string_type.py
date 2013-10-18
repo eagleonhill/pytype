@@ -2,9 +2,10 @@ from defs import *
 from ..type_value.builtin_builder import *
 import __builtin__
 
-strType = Type('str', [
+strType = Type('str', (str, ), [
   Func('__add__', ['s'], 's'),
   Func('__mul__', ['i'], 's'),
+  #Func('__getitem__', ['i'], 's'),
   Func('capitalize', [''], 's'),
   Func('center', ['i|s'], 's'),
   Func('count', ['s|LL'], 'i'),
@@ -47,11 +48,8 @@ strType = Type('str', [
 strType.rebuild(StringType)
 
 def StringCoerce(left, right):
-  value = getRealValue(right)
-  if isinstance(right, StringType):
-    if value is not None:
-      value = value
-    return (left, StringType(value))
+  if isinstance(right, StringType.get_type()):
+    return (left, right)
   else:
     return NotImplemented
 

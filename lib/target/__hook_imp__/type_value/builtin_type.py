@@ -2,27 +2,15 @@ from base import *
 from .. import checker
 
 # Implementation of type in C
-class BuiltinType(TypeValue):
-  def __new__(cls, name, base, defs):
-    orig = defs.get('__new__')
-    def create(cls, *args, **kargs):
-      value = orig(cls, *args, **kargs)
-      if not isinstance(value, BuiltinObjInstance):
-        return BuiltinObjInstance(cls, value)
-      else:
-        return value
-    defs['__new__'] = create
-
-    t = super(BuiltinType, cls).__new__(cls, name, base, defs)
-    return t
-  def __init__(self, name, base, defs):
-    real_type = defs['_' + name + '__real_type']
+class BuiltinTypeInternal:
+  def __init__(self, name, base):
     self.attr = {}
     self.base = base
-    self.real_type = real_type
+    self.name = name
+    self.export = None
 
   def check_value(self, value):
-    return type(value) == self.real_type
+    return isinstance(value, self.base)
 
   def get_attr(self, name):
     if name in self.attr:
@@ -31,15 +19,17 @@ class BuiltinType(TypeValue):
       checker.attr_error(self, name)
       return BadType()
 
-  def __call__(self, value = None):
-    if isinstance(value, BuiltinObjInstance):
-      value = getRealValue(value)
-    return BuiltinObjInstance(self, value)
+  def create_from_value(self, value):
+    assert self.check_value(value), \
+        "{0} don't accept type {1}".format(self, value)
+    return BuiltinObjDeterminedInstance(self, value)
+  def create_undetermined(self):
+    return BuiltinObjUndeterminedInstance(self)
 
   def __repr__(self):
-    return 'Instance of ' + self.real_type.__name__
+    return 'hooked class of ' + self.name
   def __str__(self):
-    return 'Instance of ' + self.real_type.__name__
+    return 'class of ' + self.name
 
   def add_unary_operator(self, op, returnType = None):
     if returnType is None:
@@ -72,25 +62,21 @@ class BuiltinType(TypeValue):
   def match(self, other):
     return self is other
 
-  def __instancecheck__(self, instance):
-    if issubclass(instance.__class__, int):
-      return True
-    if not isinstance(instance, BuiltinObjInstance):
-      return False
-    return typeEqual(getType(instance), self)
+  def get_type(self):
+    if self.export == None:
+      self.export = BuiltinType(self)
+    return self.export
 
-class BuiltinObjStatic(ValueInstance):
-  def __init__(self, t):
-    self.__type = t
-  def __get_type__(self):
-    return self.__type
+  def __str__(self):
+    return 'type ' + self.name
+
+class BuiltinType(type):
+  def __new__(cls, t):
+    val = super(BuiltinType, cls).__new__(cls, t.name, (t.base[0], ), {})
+    val.__type = t
+    t.export = val
+    return val
   def __getattr__(self, name):
-    if name == '__type':
-      return self.__get_type__()
-    elif name == '__value':
-      return self.__get_type__().real_type
-    elif name == '__has_value':
-      return True
     from func_value import InstanceFunc, FuncValue
     val = self.__type.get_attr(name)
     if isinstance(val, FuncValue):
@@ -98,58 +84,78 @@ class BuiltinObjStatic(ValueInstance):
     return val
 
   def __call__(self, *args, **kargs):
-    # TODO:Create an instance
-    pass
-  def __str__(self):
-    return str((self.__type, self.__value))
-  def __repr__(self):
-    return repr((self.__type, self.__value))
-      
+    val = self.__type.get_attr('__new__')(self, *args, **kargs)
+    return val
+
 # Instance of builtin type, contains no public values
-class BuiltinObjInstance(ValueInstance):
-  def __init__(self, t, value = None):
-    if isinstance(value, BuiltinObjInstance):
-      value = getRealValue(value)
-    assert value == None or t.check_value(value), (t, value)
-    self.__type = t
-    self.__value = value
-    self.__meta = None
-  def __get_type__(self):
-    return self.__type
-  def __get_value__(self):
-    return self.__value
-  def __has_value__(self):
-    return self.__value != None
+class BuiltinObjInstance:
+  #__slots__ = ['_type']
+  def __init__(self, *args, **kargs):
+    raise NotImplementedError('Calling abstract method')
   def __getattr__(self, name):
-    if name == '__type':
-      return self.__get_type__()
-    elif name == '__value':
-      return self.__get_value__()
-    elif name == '__has_value':
-      return self.__has_value__()
-    return self.__get_type_attr(name)
-  def __get_type_attr(self, name):
+    return self._get_type_attr(name)
+  def _get_type_attr(self, name):
     from func_type import InstanceFunc, FuncValue
-    val = self.__type.get_attr(name)
+    val = self._type.get_attr(name)
     if isinstance(val, FuncValue):
       val = InstanceFunc(val, self)
     return val
-  def __str__(self):
-    return str((self.__type, self.__value))
-  def __repr__(self):
-    return repr((self.__type, self.__value))
+  def _pytypecheck_is_determined(self):
+    raise NotImplementedError()
   def __nonzero__(self):
     try:
-      l = self.__get_type_attr('__nonzero__')()
+      l = self._get_type_attr('__nonzero__')()
     except AttributeError as e:
       try:
         l = self.__len__()
-      except AttributeError:
-        return True
-    if hasRealValue(l):
-      return True if getRealValue(l) else False
+      except AttributeError as e2:
+        l = True
+    if not hooked_isinstance(l, bool):
+      checker.type_error(l, bool)
+    if is_determined(l):
+      return get_determined_value(l)
     import os
     if os.fork():
       return True
     else:
       return False
+
+class BuiltinObjDeterminedInstance(BuiltinObjInstance):
+  #__slots__ = ['_value']
+  def __init__(self, t, value = None):
+    if isinstance(value, BuiltinObjInstance):
+      value = getRealValue(value)
+    assert value == None or t.check_value(value), (t, value)
+    self._type = t
+    self._value = value
+  def _pytypecheck_get_value(self):
+    return self._value
+  def _pytypecheck_is_determined(self):
+    return True
+  def __str__(self):
+    return '(' + str(self._type) + ': ' + str(self._value) + ')'
+  def __repr__(self):
+    return '(' + str(self._type) + ': ' + str(self._value) + ')'
+
+class BuiltinObjUndeterminedInstance(BuiltinObjInstance):
+  #__slots__ = []
+  def __init__(self, t):
+    self._type = t
+  def _pytypecheck_is_determined(self):
+    return False
+  def __str__(self):
+    return '(Undetermined ' + str(self._type) + ')'
+  def __repr__(self):
+    return '(Undetermined ' + str(self._type) + ')'
+
+def is_determined(obj):
+  if not hasattr(obj, '_pytypecheck_is_determined'):
+    return True
+  return obj._pytypecheck_is_determined()
+
+def get_determined_value(obj):
+  assert is_determined(obj), repr(obj) + ' is not determined'
+  if hasattr(obj, '_pytypecheck_get_value'):
+    return obj._pytypecheck_get_value()
+  else:
+    return obj

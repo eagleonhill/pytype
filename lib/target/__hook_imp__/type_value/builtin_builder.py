@@ -1,6 +1,8 @@
-from builtin_type import BuiltinType, BuiltinObjStatic
+from builtin_type import BuiltinType, BuiltinTypeInternal
 from func_type import BuiltinFunc, InstanceFunc
-from module import ModuleInst
+import sys
+
+sys_module = type(sys)
 
 class Module:
   def __init__(self, real, defs):
@@ -9,31 +11,24 @@ class Module:
     # Should be topmost
     self.name = real.__name__
   def build(self, parent = None):
-    defs = {
-        '_hooked_' + self.name + '__real_type': self.real,
-        '__new__': (lambda x: x),
-        }
-    ret = BuiltinType('hooked_' + self.name, (), defs)
+    ret = sys_module(self.name, self.real.__doc__)
     for d in self.defs:
       name = d.name
       value = d.build(self)
       if isinstance(value, BuiltinFunc):
         value = InstanceFunc(value, ret)
       setattr(ret, name, value)
-    return ret()
+    return ret
 
 class Type:
-  def __init__(self, name, defs):
+  def __init__(self, name, real_type, defs):
     self.defs = defs
     self.name = name
+    self.real_type = real_type
   def build(self, parent):
-    defs = {
-        '_hooked_' + self.name + '__real_type': getattr(parent.real, self.name),
-        '__new__': (lambda x: x),
-        }
-    ret = BuiltinType('hooked_' + self.name, (), defs)
+    ret = BuiltinTypeInternal(name, real_type)
     self.rebuild(parent, ret)
-    return BuiltinObjStatic(ret)
+    return ret.get_type()
   
   def rebuild(self, value):
     value.attr = {}

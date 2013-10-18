@@ -8,7 +8,7 @@ from base import *
 def getMeta(x):
   return x
 
-class MetaType(TypeValue):
+class MetaType(type):
   def __new__(cls, name, base, defs):
     #defs['__new__'] = cls.patch_new(defs.get('__new__', None))
     return super(MetaType, cls).__new__(cls, name, base, defs)

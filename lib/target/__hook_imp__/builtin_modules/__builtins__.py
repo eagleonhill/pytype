@@ -6,10 +6,13 @@ def __define_module():
     __builtin__,
     [
       Func('raw_input', ['|S'], 's', call_default=False),
-      Func('int', ['s|i', 'i', 'f'], 'i'),
-      Func('float', ['s', 'i', 'f'], 'f'),
-      Value('True', BoolType(True)),
-      Value('False', BoolType(False)),
+      Value('int', IntType.get_type()),
+      Value('long', IntType.get_type()),
+      Value('float', FloatType.get_type()),
+      Value('bool', BoolType.get_type()),
+      Value('str', StringType.get_type()),
+      Value('True', BoolType.create_from_value(True)),
+      Value('False', BoolType.create_from_value(False)),
     ]
   )
   export(globals(), module.build())

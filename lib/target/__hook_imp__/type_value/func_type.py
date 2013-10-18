@@ -1,15 +1,12 @@
 import checker
-from base import TypeValue, BadType, getRealValue, hasRealValue,\
-    CanBeNone
+from base import BadType, hooked_isinstance
+from builtin_type import get_determined_value, is_determined
 
-class FuncValue:
-  pass
-
-class InvokePattern:
+class InvokePattern(object):
   def __init__(self, args):
     self.f = f
     self.args = args
-    self.returnType = BadType
+    self.return_type = BadType
     self.error = error
   def match(self, args):
     # TODO: check kargs
@@ -22,11 +19,11 @@ class InvokePattern:
       if not args[k].match(self.args[k]):
         return False
     return True
-  def compute(self):
-    # TODO
+  def get_result(self, args):
     pass
-  def getResult(self, args):
-    pass
+
+class FuncValue:
+  pass
 
 # Function created by 'def'
 class UserFunc(FuncValue):
@@ -55,38 +52,90 @@ class StubFunc(FuncValue):
   def __init__(self, func):
     self.func = func
   def __call__(self, *args, **kargs):
+    # TODO: verify signature
     return self.func(*args, **kargs)
-    try:
-      return self.func(*args, **kargs)
-    except TypeError as ex:
-      print 'Bad internal call!'
-      checker.type_error(self, ex)
-      return BadType
+
+class BuiltinInvokePattern(InvokePattern):
+  def __init__(self, args, optional_args, return_type):
+    if args is None:
+      args = []
+    if optional_args is None:
+      optional_args = []
+    from builtin_type import BuiltinTypeInternal
+    def convert(x):
+      if isinstance(x, BuiltinTypeInternal):
+        return x.base
+      else:
+        return x
+    args = map(convert, args)
+    optional_args = map(convert, optional_args)
+    self.args = args
+    self.optional_args = optional_args
+    self.all_args = args + optional_args
+    self.return_type = return_type
+
+  def match(self, args):
+    if len(args) < len(self.args) or len(args) > len(self.all_args):
+      return False
+    return all(map(hooked_isinstance, args, self.all_args))
+  
+  @classmethod
+  def create_from_format(cls, formatstr, args, return_type):
+    args, optional_args = FormatStrParser.parse(formatstr, args)
+    if type(return_type) == str:
+      return_type = FormatStrParser.get_return_type(return_type)
+    return cls(args, optional_args, return_type)
+  
+  def __repr__(self):
+    return '({0}, [{1}]):{2}'.format(
+        ', '.join(map(str, self.args)),
+        ', '.join(map(str, self.optional_args)),
+        str(self.return_type)
+        )
 
 class FormatStrParser:
   mapping = None
+  wrapper = None
   @classmethod
   def setup(cls):
     if cls.mapping == None:
       # TODO: Auto register
-      from ..builtin_types.defs import *
-      cls.mapping = {
-          'b': BoolType,
-          's': StringType,
-          'i': IntType,
-          'l': IndexType,
-          'f': FloatType,
+      from ..builtin_types import defs
+      b = defs
+      cls.wrapper = {
+          'b': b.BoolType,
+          's': b.StringType,
+          'i': b.IntType,
+          'l': b.IndexType,
+          'f': b.FloatType,
           't': None,
+          }
+      cls.mapping = {
+          'b': (bool,),
+          's': (str,),
+          'i': (int, long),
+          'l': (b.IndexType,),
+          'f': (float,),
+          't': None
           }
 
   @classmethod
-  def getitem(cls, item):
-    assert item.lower() in cls.mapping
-    t = cls.mapping[item.lower()]
-    if item.upper() == item:
-      return CanBeNone(t)
+  def getitem(cls, item, args):
+    if (item.lower() == 't'):
+      t = args.pop()
+      if type(t) != tuple:
+        t = (t, )
+    else:
+      assert item.lower() in cls.mapping, 'Unknown type ' + item
+      t = cls.mapping[item.lower()]
+    if item.isupper():
+      return (type(None), ) + t
     else:
       return t
+
+  @classmethod
+  def get_return_type(cls, item):
+    return cls.wrapper[item]
 
   @classmethod
   def parse_item(cls, item):
@@ -98,6 +147,7 @@ class FormatStrParser:
     cls.setup()
     if args is None:
       args = []
+    args = args.reverse()
     mapping = cls.mapping
     types = []
     optionaltypes = []
@@ -106,15 +156,11 @@ class FormatStrParser:
     for ch in formatstr:
       if ch == '|':
         cur = optionaltypes
-      elif ch == 't' or ch == 'T':
-        # Get a type from args
-        cur.append(args[argindex])
-        argindex += 1
       else:
-        cur.append(cls.getitem(ch))
+        cur.append(cls.getitem(ch, args))
     return types, optionaltypes
 
-# Do a simple type-check, and call the builtin function
+# Do a simple type-check, and call the builtin function if applicable
 class BuiltinFunc(FuncValue):
   def __init__(self, name):
     self.call_default = True
@@ -124,38 +170,37 @@ class BuiltinFunc(FuncValue):
   def set_attribute(self, call_default = True, sideeffect = False):
     self.call_default = call_default
     self.sideeffect = sideeffect
+  
+  def add_from_format_str(self, formatstr, args, return_type):
+    self.patterns.append(
+        BuiltinInvokePattern.create_from_format(formatstr, args, return_type))
 
-  def add_pattern(self, types, optionalTypes, returnType):
-    if optionalTypes is None:
-      optionalTypes = []
-    self.patterns.append((types, optionalTypes, returnType))
-
-  def add_from_format_str(self, formatstr, args, returnType):
-    types, optionalTypes = FormatStrParser.parse(formatstr, args)
-    if isinstance(returnType, str):
-      returnType = FormatStrParser.parse_item(returnType)
-    self.add_pattern(types, optionalTypes, returnType)
+  def add_pattern(self, args, optional_args, return_type):
+    self.patterns.append(BuiltinInvokePattern(args, optional_args, return_type))
 
   def __str__(self):
     return self.name
 
-  def __call__(self, context, *args):
-    for types, optionalTypes, returnType in self.patterns:
-      if len(types) < len(args):
-        continue
-      check_func = lambda a, b: a is None or isinstance(a, b)
-      checked = all(map(check_func, args, types + optionalTypes))
-      if checked:
-        break;
+  def can_invoke_stub(self, context, args):
+    return self.call_default and all(map(is_determined, (context, ) + args))
+
+  def get_matched_pattern(self, args):
+    f = filter(lambda x: x.match(args), self.patterns)
+    if len(f) == 0:
+      return None
     else:
-      checker.type_error(args, types + optionalTypes)
-      return BadType
-    
-    if self.call_default and hasRealValue(context) and \
-        all(map(lambda x: hasRealValue(x), args)):
-      vargs = map(lambda x: getRealValue(x), args)
-      return returnType(getattr(getRealValue(context), self.name)(*vargs))
-    return returnType()
+      return f[0]
+  def __call__(self, context, *args):
+    pattern = self.get_matched_pattern(args)
+    if pattern is None:
+      checker.argument_error(args, self.patterns)
+
+    if self.can_invoke_stub(context, args):
+      vargs = map(lambda x: get_determined_value(x), args)
+      value = (getattr(get_determined_value(context), self.name)(*vargs))
+      return pattern.return_type.create_from_value(value)
+    else:
+      return pattern.return_type.create_undetermined()
 
 class InstanceFunc:
   def __init__(self, func, context):

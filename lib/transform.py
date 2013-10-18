@@ -11,12 +11,12 @@ class Visitor(NodeTransformer):
     return node
 
   def visit_Num(self, node):
-    return self.wrap('NumValue', node)
+    return self.wrap('num_const', node)
   def visit_Str(self, node):
-    return self.wrap('StringType', node)
+    return self.wrap('str_const', node)
   def visit_List(self, node):
     self.generic_visit(node)
-    return self.wrap('ListType', node)
+    return self.wrap('list_const', node)
 
   def wrap(self, typename, node):
     return copy_location(Call(
