@@ -17,6 +17,9 @@ for ops in ['add', 'sub', 'mul', 'div', 'floordiv', 'mod', 'pow',
   IntType.add_binary_operator('__r' + ops + '__')
 #IntType.add_binary_operator('__divmod__', returnType=lambda: (IntType, IntType))
 
+for ops in ['eq', 'le', 'lt', 'ge', 'gt', 'ne']: 
+  IntType.add_binary_operator('__' + ops + '__', returnType=BoolType)
+  IntType.add_binary_operator('__r' + ops + '__', returnType=BoolType)
 notGiven = object()
 def int_new(cls, value, base = notGiven):
   if hooked_isinstance(value, str):

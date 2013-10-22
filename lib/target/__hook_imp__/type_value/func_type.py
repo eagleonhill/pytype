@@ -23,7 +23,9 @@ class InvokePattern(object):
     pass
 
 class FuncValue:
-  pass
+  def __typeeq__(self, other):
+    # TODO check parameters
+    return isinstance(other, (InstanceFunc, FuncValue))
 
 # Function created by 'def'
 class UserFunc(FuncValue):
@@ -202,7 +204,7 @@ class BuiltinFunc(FuncValue):
     else:
       return pattern.return_type.create_undetermined()
 
-class InstanceFunc:
+class InstanceFunc(FuncValue):
   def __init__(self, func, context):
     self.func = func
     self.context = context

@@ -119,13 +119,15 @@ class BuiltinObjInstance:
       return True
     else:
       return False
+  def __typeeq__(self, other):
+    if not isinstance(other, BuiltinObjInstance):
+      return False
+    return self._type is other._type
 
 class BuiltinObjDeterminedInstance(BuiltinObjInstance):
   #__slots__ = ['_value']
   def __init__(self, t, value = None):
-    if isinstance(value, BuiltinObjInstance):
-      value = getRealValue(value)
-    assert value == None or t.check_value(value), (t, value)
+    assert t.check_value(value), (t, value)
     self._type = t
     self._value = value
   def _pytypecheck_get_value(self):
@@ -136,6 +138,8 @@ class BuiltinObjDeterminedInstance(BuiltinObjInstance):
     return '(' + str(self._type) + ': ' + str(self._value) + ')'
   def __repr__(self):
     return '(' + str(self._type) + ': ' + str(self._value) + ')'
+  def _create_undetermined(self):
+    return BuiltinObjUndeterminedInstance(self._type)
 
 class BuiltinObjUndeterminedInstance(BuiltinObjInstance):
   #__slots__ = []
@@ -147,6 +151,8 @@ class BuiltinObjUndeterminedInstance(BuiltinObjInstance):
     return '(Undetermined ' + str(self._type) + ')'
   def __repr__(self):
     return '(Undetermined ' + str(self._type) + ')'
+  def _create_undetermined(self):
+    return self
 
 def is_determined(obj):
   if not hasattr(obj, '_pytypecheck_is_determined'):

@@ -11,6 +11,8 @@ def __define_module():
       Value('float', FloatType.get_type()),
       Value('bool', BoolType.get_type()),
       Value('str', StringType.get_type()),
+      Value('list', ListType),
+      Value('dict', DictType),
       Value('True', BoolType.create_from_value(True)),
       Value('False', BoolType.create_from_value(False)),
     ]

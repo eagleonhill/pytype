@@ -14,6 +14,10 @@ for ops in ['add', 'sub', 'mul', 'div', 'floordiv', 'mod', 'pow']:
   FloatType.add_binary_operator('__' + ops + '__')
   FloatType.add_binary_operator('__r' + ops + '__')
 
+for ops in ['eq', 'le', 'lt', 'ge', 'gt', 'ne']: 
+  FloatType.add_binary_operator('__' + ops + '__', returnType=BoolType)
+  FloatType.add_binary_operator('__r' + ops + '__', returnType=BoolType)
+
 def float_coerce(left, right):
   if hooked_isinstance(right, float) or \
       hooked_isinstance(right, (int, long)):
