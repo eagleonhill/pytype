@@ -9,16 +9,13 @@ class UltimateType:
 BadType = UltimateType()
 
 def hooked_isinstance(instance, type_):
-  from builtin_type import BuiltinObjInstance, BuiltinObjDeterminedInstance
+  from builtin_type import BuiltinObjInstance
   if not isinstance(instance, BuiltinObjInstance) or \
-      (type(type_) == type(BuiltinObjInstance) and \
-      issubclass(type_, BuiltinObjInstance)):
+      type(type_) != tuple and issubclass(type_, BuiltinObjInstance):
     return isinstance(instance, type_)
-  elif isinstance(instance, BuiltinObjDeterminedInstance):
-    return isinstance(instance._value, type_)
   else:
     t = instance._type
     if type(type_) is not tuple:
       type_ = (type_, )
     return all(map(\
-        lambda y:any(map(lambda x: issubclass(y, x), t.base)), type_))
+        lambda x:any(map(lambda y: issubclass(x, y), type_)), t.base))

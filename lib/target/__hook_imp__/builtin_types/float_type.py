@@ -14,10 +14,6 @@ for ops in ['add', 'sub', 'mul', 'div', 'floordiv', 'mod', 'pow']:
   FloatType.add_binary_operator('__' + ops + '__')
   FloatType.add_binary_operator('__r' + ops + '__')
 
-for ops in ['eq', 'le', 'lt', 'ge', 'gt', 'ne']: 
-  FloatType.add_binary_operator('__' + ops + '__', returnType=BoolType)
-  FloatType.add_binary_operator('__r' + ops + '__', returnType=BoolType)
-
 def float_coerce(left, right):
   if hooked_isinstance(right, float) or \
       hooked_isinstance(right, (int, long)):
@@ -39,5 +35,8 @@ FloatType.add_stub_function('__new__', float_new)
 
 FloatType.add_unary_operator('__int__', returnType=IntType)
 FloatType.add_unary_operator('__long__', returnType=IntType)
-FloatType.add_unary_operator('__nonzero__', returnType=BoolType)
+def float_nonzero(value):
+  return value != FloatType.create_from_value(0.0)
+
+FloatType.add_stub_function('__nonzero__', float_nonzero)
 FloatType.add_stub_function('__float__', lambda x:x)

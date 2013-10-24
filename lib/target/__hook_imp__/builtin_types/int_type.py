@@ -17,9 +17,6 @@ for ops in ['add', 'sub', 'mul', 'div', 'floordiv', 'mod', 'pow',
   IntType.add_binary_operator('__r' + ops + '__')
 #IntType.add_binary_operator('__divmod__', returnType=lambda: (IntType, IntType))
 
-for ops in ['eq', 'le', 'lt', 'ge', 'gt', 'ne']: 
-  IntType.add_binary_operator('__' + ops + '__', returnType=BoolType)
-  IntType.add_binary_operator('__r' + ops + '__', returnType=BoolType)
 notGiven = object()
 def int_new(cls, value, base = notGiven):
   if hooked_isinstance(value, str):
@@ -48,4 +45,7 @@ IntType.add_stub_function('__new__', int_new)
 IntType.add_unary_operator('__float__', returnType=FloatType)
 IntType.add_stub_function('__int__', lambda x: x)
 IntType.add_stub_function('__long__', lambda x: x)
-IntType.add_unary_operator('__nonzero__', returnType=BoolType)
+def int_nonzero(value):
+  return value != IntType.create_from_value(0)
+
+IntType.add_stub_function('__nonzero__', int_nonzero)

@@ -1,6 +1,7 @@
 from defs import *
 import defs
 from ..checker import type_equal
+from ..type_value import get_determined_value, is_determined
 
 class UndeterminedList:
   #__metaclass__ = GenericList
@@ -8,6 +9,7 @@ class UndeterminedList:
     self._items = []
     self._types = []
     self._length = IntType.create_from_value(0)
+    self._maybeempty = False
     if isinstance(iterable, UndeterminedList):
       self._items = list(iterable._items)
       self._types = list(iterable._types)
@@ -63,5 +65,26 @@ class UndeterminedList:
   def __repr__(self):
     return 'List(items=' + str(self._items) + ', types=' + str(self._types) +\
         ', len=' + str(self._length)
+
+  def __nonzero__(self):
+    if is_determined(self._length):
+      return get_determined_value(self._items) > 0
+    elif len(self._types) > 0 and not self._maybeempty:
+      return True
+    elif len(self._types) == 0:
+      return False
+    else:
+      if checker.fork():
+        # Make it empty
+        self._maybeempty = False
+        self._types = []
+        self._items = []
+        self._length = IntType.create_from_value(0)
+        return False
+      else:
+        # Make it non empty
+        self._maybeempty = False
+        return True
+UndeterminedList.__name__ = 'list'
 
 defs.ListType = UndeterminedList

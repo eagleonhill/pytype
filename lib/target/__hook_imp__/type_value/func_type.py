@@ -198,7 +198,7 @@ class BuiltinFunc(FuncValue):
       checker.argument_error(args, self.patterns)
 
     if self.can_invoke_stub(context, args):
-      vargs = map(lambda x: get_determined_value(x), args)
+      vargs = map(get_determined_value, args)
       value = (getattr(get_determined_value(context), self.name)(*vargs))
       return pattern.return_type.create_from_value(value)
     else:

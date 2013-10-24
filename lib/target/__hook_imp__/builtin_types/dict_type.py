@@ -1,13 +1,14 @@
 from defs import *
 import defs
 from ..checker import type_equal, type_error
-from ..type_value import get_determined_value, hooked_isinstance
+from ..type_value import get_determined_value, hooked_isinstance, is_determined
 
 class UndeterminedDict:
   #__metaclass__ = GenericList
   def __init__(self, iterable = None):
     self._items = {}
     self._types = []
+    self._maybeempty = False
     if isinstance(iterable, UndeterminedDict):
       self._items = dict(iterable._items)
       self._types = list(iterable._types)
@@ -108,4 +109,25 @@ class UndeterminedDict:
       d[get_determined_value(key)] = value
     return d
 
+  def __nonzero__(self):
+    if not self._typeinfo_only():
+      return len(self._items) > 0
+    elif len(self._types) > 0 and not self._maybeempty:
+      return True
+    elif len(self._types) == 0:
+      return False
+    else:
+      if checker.fork():
+        # Make it empty
+        self._maybeempty = False
+        self._types = []
+        self._items = []
+        self._length = IntType.create_from_value(0)
+        return False
+      else:
+        # Make it non empty
+        self._maybeempty = False
+        return True
+
+UndeterminedDict.__name__ = 'dict'
 defs.DictType = UndeterminedDict

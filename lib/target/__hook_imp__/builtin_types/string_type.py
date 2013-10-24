@@ -1,9 +1,11 @@
 from defs import *
+from .. import checker
 from ..type_value.builtin_builder import *
 import __builtin__
 
 strType = Type('str', (str, ), [
   Func('__add__', ['s'], 's'),
+  Func('__float__', [''], 'f'),
   Func('__mul__', ['i'], 's'),
   #Func('__getitem__', ['i'], 's'),
   Func('capitalize', [''], 's'),
@@ -47,11 +49,15 @@ strType = Type('str', (str, ), [
 
 strType.rebuild(StringType)
 
-def StringCoerce(left, right):
+def str_coerce(left, right):
   if isinstance(right, StringType.get_type()):
     return (left, right)
   else:
     return NotImplemented
 
-StringType.add_stub_function('__coerce__', StringCoerce)
+StringType.add_stub_function('__coerce__', str_coerce)
 
+def str_nonzero(value):
+  return value != StringType.create_from_value('')
+
+StringType.add_stub_function('__nonzero__', str_nonzero)

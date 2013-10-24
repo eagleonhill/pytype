@@ -13,8 +13,11 @@ class BuiltinTypeInternal:
     return isinstance(value, self.base)
 
   def get_attr(self, name):
+    import compare_func
     if name in self.attr:
       return self.attr[name]
+    elif name in compare_func.default_cmp:
+      return compare_func.default_cmp[name]
     else:
       checker.attr_error(self, name)
       return BadType()
@@ -22,9 +25,9 @@ class BuiltinTypeInternal:
   def create_from_value(self, value):
     assert self.check_value(value), \
         "{0} don't accept type {1}".format(self, value)
-    return BuiltinObjDeterminedInstance(self, value)
+    return BuiltinObjInstance(self, value)
   def create_undetermined(self):
-    return BuiltinObjUndeterminedInstance(self)
+    return BuiltinObjInstance(self)
 
   def __repr__(self):
     return 'hooked class of ' + self.name
@@ -90,8 +93,9 @@ class BuiltinType(type):
 # Instance of builtin type, contains no public values
 class BuiltinObjInstance:
   #__slots__ = ['_type']
-  def __init__(self, *args, **kargs):
-    raise NotImplementedError('Calling abstract method')
+  def __init__(self, t, value = None):
+    self._type = t
+    self._value = value
   def __getattr__(self, name):
     return self._get_type_attr(name)
   def _get_type_attr(self, name):
@@ -100,59 +104,28 @@ class BuiltinObjInstance:
     if isinstance(val, FuncValue):
       val = InstanceFunc(val, self)
     return val
-  def _pytypecheck_is_determined(self):
-    raise NotImplementedError()
-  def __nonzero__(self):
-    try:
-      l = self._get_type_attr('__nonzero__')()
-    except AttributeError as e:
-      try:
-        l = self.__len__()
-      except AttributeError as e2:
-        l = True
-    if not hooked_isinstance(l, bool):
-      checker.type_error(l, bool)
-    if is_determined(l):
-      return get_determined_value(l)
-    import os
-    if os.fork():
-      return True
-    else:
-      return False
   def __typeeq__(self, other):
     if not isinstance(other, BuiltinObjInstance):
       return False
     return self._type is other._type
-
-class BuiltinObjDeterminedInstance(BuiltinObjInstance):
-  #__slots__ = ['_value']
-  def __init__(self, t, value = None):
-    assert t.check_value(value), (t, value)
-    self._type = t
-    self._value = value
   def _pytypecheck_get_value(self):
     return self._value
   def _pytypecheck_is_determined(self):
-    return True
+    return self._value is not None
   def __str__(self):
-    return '(' + str(self._type) + ': ' + str(self._value) + ')'
+    if is_determined(self):
+      return '(' + str(self._type) + ': ' + str(self._value) + ')'
+    else:
+      return '(Undetermined ' + str(self._type) + ')'
   def __repr__(self):
-    return '(' + str(self._type) + ': ' + str(self._value) + ')'
-  def _create_undetermined(self):
-    return BuiltinObjUndeterminedInstance(self._type)
-
-class BuiltinObjUndeterminedInstance(BuiltinObjInstance):
-  #__slots__ = []
-  def __init__(self, t):
-    self._type = t
-  def _pytypecheck_is_determined(self):
-    return False
-  def __str__(self):
-    return '(Undetermined ' + str(self._type) + ')'
-  def __repr__(self):
-    return '(Undetermined ' + str(self._type) + ')'
-  def _create_undetermined(self):
-    return self
+    if is_determined(self):
+      return '(' + str(self._type) + ': ' + str(self._value) + ')'
+    else:
+      return '(Undetermined ' + str(self._type) + ')'
+  def _make_determined(self, value):
+    assert not is_determined(self), 'Already have a value'
+    assert self._type.check_value(value), "Not accepting " + repr(value)
+    self._value = value
 
 def is_determined(obj):
   if not hasattr(obj, '_pytypecheck_is_determined'):

@@ -1,3 +1,4 @@
+import os
 def type_error(value, expected_type):
   raise TypeError(value, expected_type)
 def convert_error(f, t):
@@ -7,6 +8,9 @@ def attr_error(value, attr):
 def argument_error(args, pattern):
   raise TypeError(args, pattern)
 
+def uncomparable_warning(x, y):
+  pass
+
 def type_equal(val1, val2):
   if hasattr(val1, '__typeeq__'):
     return val1.__typeeq__(val2)
@@ -14,3 +18,9 @@ def type_equal(val1, val2):
     return val2.__typeeq__(val1)
   else:
     return val1.__class__ is val2.__class__
+
+def fork():
+  return not not os.fork()
+
+def impossible_path():
+  os.exit()

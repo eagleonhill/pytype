@@ -1,4 +1,5 @@
-from ..type_value import BuiltinTypeInternal, is_determined
+from ..type_value import BuiltinTypeInternal, is_determined,\
+    get_determined_value
 
 IntType = BuiltinTypeInternal('int', (int, long))
 IndexType = BuiltinTypeInternal('int', (int, long))
