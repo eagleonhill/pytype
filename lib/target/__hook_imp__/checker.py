@@ -1,4 +1,5 @@
-import os
+import revision
+
 def type_error(value, expected_type):
   raise TypeError(value, expected_type)
 def convert_error(f, t):
@@ -19,8 +20,16 @@ def type_equal(val1, val2):
   else:
     return val1.__class__ is val2.__class__
 
+def get_revision_manager():
+  import revision
+  return revision.get_revisions()
+def get_current_frame():
+  return get_revision_manager().traced_frame
 def fork():
-  return not not os.fork()
+  return get_current_frame().get_next_bool_decision()
 
 def impossible_path():
-  os.exit()
+  get_current_frame().impossible_path()
+
+def duplicated_path():
+  get_current_frame().duplicated_path()
