@@ -118,16 +118,20 @@ class FunctionDecision(DecisionSet):
       raise exc_type, exc_value, traceback
   def goto_next(self):
     self.index += 1
-  def dump(self, target = None):
+  def dump_return_values(self, target = None):
     if target is None:
       import sys
       target = sys.stderr
     if not self.return_values:
       print >> target, 'No return values'
     else:
-      print >> target, 'Results:'
+      print >> target, 'Returns:'
       for x, rev in self.return_values:
         print >> target, '  ', repr(x)
+  def dump_exceptions(self, target = None):
+    if target is None:
+      import sys
+      target = sys.stderr
     if not self.exceptions:
       print >> target, 'No exceptions'
     else:
@@ -140,11 +144,19 @@ class FunctionDecision(DecisionSet):
           print >> target, '==========================================='
         import traceback
         traceback.print_exception(exc_type, exc_value, tb)
+  def dump(self, target = None):
+    if target is None:
+      import sys
+      target = sys.stderr
+    self.dump_return_values(target)
+    print >> target, '==========================================='
+    self.dump_exceptions(target)
 
 def TracedFunction(func):
   def traced_func_call(*args, **kargs):
     cur_frame = get_revisions().traced_frame
-    if cur_frame is not None and cur_frame.has_more_decisions():
+    assert cur_frame, 'Root frame is not set'
+    if cur_frame.has_more_decisions():
       return cur_frame.get_next_call_decision()
     frame = TracedFrame(cur_frame)
     rev = get_revisions().cur_rev
@@ -153,10 +165,6 @@ def TracedFunction(func):
         get_revisions().set_rev(rev)
         frame.result.add_return_value(func(*args, **kargs))
 
-    if cur_frame:
-      cur_frame.add_decision(frame.result)
-      return cur_frame.get_next_call_decision()
-    else:
-      # Top frame
-      frame.result.dump()
+    cur_frame.add_decision(frame.result)
+    return cur_frame.get_next_call_decision()
   return traced_func_call

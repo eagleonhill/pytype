@@ -1,6 +1,6 @@
-from lib.transform import transform
 import os
 import sys
+from lib.transform import transform
 
 if not sys.argv[1:] or sys.argv[1] in ("--help", "-h"):
   print "usage: pdb.py scriptfile [arg] ..."
@@ -17,6 +17,11 @@ del sys.argv[0]         # Hide "pdb.py" from argument list
 sys.path[0] = os.path.dirname(mainpyfile)
 sys.path.append(os.path.join(os.path.dirname(__file__), 'lib', 'target'))
 
+from __hook_imp__.traced_frame import TracedFrame
 exc = transform(open(mainpyfile).read(), mainpyfile)
 mod = compile(exc, mainpyfile, 'exec')
-exec mod
+frame = TracedFrame(None)
+while frame.next_path():
+  with frame:
+    exec mod
+frame.result.dump_exceptions()
