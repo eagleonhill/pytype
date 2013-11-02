@@ -20,23 +20,23 @@ class Revision:
     for rev, obj, value in self.objs.itervalues():
       self.replay(obj)
     self.rm.cur_rev = self
-  def replay(self, obj = None):
+  def replay(self, obj = None, oldvalue = None):
     if obj is None:
       self.replay_revision()
       return
     rev, obj2, value = self.objs[id(obj)]
     assert obj2 is obj
-    oldvalue = None
-    if rev:
-      oldrev, obj2, oldvalue = rev.objs[id(obj)]
-      assert obj2 is obj
+    if oldvalue is None:
+      if rev:
+        oldrev, obj2, oldvalue = rev.objs[id(obj)]
+        assert obj2 is obj
     with self.rm.replay_lock:
       restore_snapshot(obj, value, oldvalue)
   def rollback(self):
     #print 'Rollback', self
     for rev, obj, value in self.objs.itervalues():
       if rev is not None:
-        rev.replay(obj)
+        rev.replay(obj, value)
       else:
         # The object is new created. It shouldn't be referenced after rollback
         pass

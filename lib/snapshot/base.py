@@ -59,5 +59,5 @@ def restore_as_dict(obj, value, cur = None):
   if cur:
     for attr in set(cur.keys()) - set(value.keys()):
       delattr(obj, attr)
-  for key, v in value.itervalues():
+  for key, v in value.iteritems():
     setattr(obj, key, v)

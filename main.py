@@ -13,7 +13,7 @@ if not os.path.exists(mainpyfile):
   print 'Error:', mainpyfile, 'does not exist'
   sys.exit(1)
 
-del sys.argv[0]         # Hide "pdb.py" from argument list
+del sys.argv[0]         # Hide "pytype.py" from argument list
 
 # Replace pdb's dir with script's dir in front of module search path.
 sys.path[0] = os.path.dirname(mainpyfile)

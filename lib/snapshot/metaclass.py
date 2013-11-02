@@ -53,13 +53,13 @@ class SnapshotableMetaClass(type):
     return t
 
 class BaseObject(Snapshotable):
+  def __new__(cls, *args, **kwds):
+    x = super(BaseObject, cls).__new__(cls, *args, **kwds)
+    notify_update(x)
+    return x
   def __setattr__(self, key, value):
     notify_update(self)
     super(BaseObject, self).__setattr__(key, value)
-  def __new__(cls, *args, **kwds):
-    x = super(BaseObject, cls).__new__(*args, **kwds)
-    notify_update(x)
-    return x
   def __make__(self):
     if hasattr(self, '__slots__'):
       slots = self.__slots__
