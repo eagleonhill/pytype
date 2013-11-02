@@ -96,24 +96,27 @@ class BooleanDecision(DecisionSet):
 class FunctionDecision(DecisionSet):
   def __init__(self):
     self.return_values = []
+    self.start_revision = get_revisions().commit()
     self.exceptions = []
     self.index = 0
   def add_exception(self, exc_type, exc_value, traceback):
-    revision = get_revisions().cur_rev
+    revision = get_revisions().commit()
     self.exceptions.append((exc_type, exc_value, traceback, revision))
   def add_return_value(self, value):
-    revision = get_revisions().cur_rev
+    revision = get_revisions().commit()
     self.return_values.append((value, revision))
   def has_next(self):
     return self.index + 1 < len(self.return_values) + len(self.exceptions)
   def current(self):
     if self.index < len(self.return_values):
       ret, revision = self.return_values[self.index]
+      get_revisions().discard()
       get_revisions().set_rev(revision)
       return ret
     else:
       i = self.index - len(self.return_values)
       exc_type, exc_value, traceback, revision = self.exceptions[i]
+      get_revisions().discard()
       get_revisions().set_rev(revision)
       raise exc_type, exc_value, traceback
   def goto_next(self):

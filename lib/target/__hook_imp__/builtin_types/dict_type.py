@@ -2,16 +2,17 @@ from defs import *
 import defs
 from ..checker import type_equal, type_error
 from ..type_value import get_determined_value, hooked_isinstance, is_determined
+from ..snapshot import SDict, SList, SnapshotableMetaClass
 
 class UndeterminedDict:
-  #__metaclass__ = GenericList
+  __metaclass__ = SnapshotableMetaClass
   def __init__(self, iterable = None):
-    self._items = {}
-    self._types = []
+    self._items = SDict()
+    self._types = SList()
     self._maybeempty = False
     if isinstance(iterable, UndeterminedDict):
-      self._items = dict(iterable._items)
-      self._types = list(iterable._types)
+      self._items = SDict(iterable._items)
+      self._types = SList(iterable._types)
     elif isinstance(iterable, dict):
       for x in iterable:
         self[x] = iterable[x]
@@ -119,10 +120,7 @@ class UndeterminedDict:
     else:
       if checker.fork():
         # Make it empty
-        self._maybeempty = False
-        self._types = []
-        self._items = []
-        self._length = IntType.create_from_value(0)
+        self.__init__()
         return False
       else:
         # Make it non empty

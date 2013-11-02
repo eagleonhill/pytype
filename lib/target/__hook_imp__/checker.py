@@ -1,5 +1,3 @@
-import revision
-
 def type_error(value, expected_type):
   raise TypeError(value, expected_type)
 def convert_error(f, t):
@@ -33,3 +31,6 @@ def impossible_path():
 
 def duplicated_path():
   get_current_frame().duplicated_path()
+
+def notify_update(obj):
+  get_revision_manager().notify_update(obj)

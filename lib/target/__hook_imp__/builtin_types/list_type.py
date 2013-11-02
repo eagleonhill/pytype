@@ -2,17 +2,18 @@ from defs import *
 import defs
 from ..checker import type_equal
 from ..type_value import get_determined_value, is_determined
+from ..snapshot import SList, SnapshotableMetaClass
 
 class UndeterminedList:
-  #__metaclass__ = GenericList
+  __metaclass__ = SnapshotableMetaClass
   def __init__(self, iterable = None):
-    self._items = []
-    self._types = []
+    self._items = SList()
+    self._types = SList()
     self._length = IntType.create_from_value(0)
     self._maybeempty = False
     if isinstance(iterable, UndeterminedList):
-      self._items = list(iterable._items)
-      self._types = list(iterable._types)
+      self._items = SList(iterable._items)
+      self._types = SList(iterable._types)
       self._length = iterable._length
     else:
       for item in iterable:
@@ -76,10 +77,7 @@ class UndeterminedList:
     else:
       if checker.fork():
         # Make it empty
-        self._maybeempty = False
-        self._types = []
-        self._items = []
-        self._length = IntType.create_from_value(0)
+        self.__init__()
         return False
       else:
         # Make it non empty

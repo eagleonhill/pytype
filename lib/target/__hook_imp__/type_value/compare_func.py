@@ -1,11 +1,12 @@
 import checker
-import weakref
+from ..snapshot import SWeakKeyDictionary, SWeakValueDictionary,\
+    SnapshotableMetaClass
 from base import hooked_isinstance
 from builtin_type import get_determined_value, is_determined, BuiltinObjInstance
 from func_type import StubFunc
 
 class CompareHistory:
-
+  __metaclass__ = SnapshotableMetaClass
   inverse_op = {
       '__eq__': '__eq__',
       '__ne__': '__ne__',
@@ -37,10 +38,10 @@ class CompareHistory:
     self.low_inclusive = True
     self.high = None
     self.high_inclusive = True
-    self.nonequal = set()
+    self.nonequal = SWeakValueDictionary()
 
     # Compare to undertermined value
-    self.comp = weakref.WeakKeyDictionary()
+    self.comp = SWeakKeyDictionary()
 
   def update(self, value, s):
     if s == set([0]):
@@ -68,7 +69,7 @@ class CompareHistory:
         self.low_inclusive = True
     elif s == set([-1, 1]):
       # self != value
-      self.nonequal.add(value)
+      self.nonequal[id(value)] = value
     if self.low == self.high and self.low is not None:
       if self.low_inclusive and self.high_inclusive:
         del self.value.__comparer
@@ -115,7 +116,7 @@ class CompareHistory:
       elif self.high == other and self.high_inclusive:
         # self <= other
         s &= set([-1, 0])
-    if other in self.nonequal:
+    if id(other) in self.nonequal:
       s &= set([-1, 1])
     trues = self.operatormap[operator]
     falses = set([0, 1, -1]) - trues

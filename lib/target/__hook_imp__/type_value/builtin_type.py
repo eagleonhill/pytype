@@ -1,8 +1,9 @@
 from base import *
 from .. import checker
+from ..snapshot import SnapshotableMetaClass, Snapshotable, Immutable
 
 # Implementation of type in C
-class BuiltinTypeInternal:
+class BuiltinTypeInternal(Immutable):
   def __init__(self, name, base):
     self.attr = {}
     self.base = base
@@ -92,6 +93,7 @@ class BuiltinType(type):
 
 # Instance of builtin type, contains no public values
 class BuiltinObjInstance:
+  __metaclass__ = SnapshotableMetaClass
   #__slots__ = ['_type']
   def __init__(self, t, value = None):
     self._type = t
