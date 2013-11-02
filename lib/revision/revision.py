@@ -33,6 +33,7 @@ class Revision:
     with self.rm.replay_lock:
       restore_snapshot(obj, value, oldvalue)
   def rollback(self):
+    #print 'Rollback', self
     for rev, obj, value in self.objs.itervalues():
       if rev is not None:
         rev.replay(obj)

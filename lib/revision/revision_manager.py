@@ -34,6 +34,7 @@ class RevisionManager(object):
     for obj in self.changed_objs.itervalues():
       old_rev = self.get_last_obj_rev(obj)
       new_rev.take_snapshot(old_rev, obj)
+      #print obj.__class__, 'commited'
       self.set_last_obj_rev(obj, new_rev)
     self.changed_objs.clear()
     self.cur_rev = new_rev

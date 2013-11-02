@@ -1,5 +1,6 @@
 from ..type_value.builtin_builder import *
 from ..builtin_types import *
+from ..snapshot import BaseObject
 import __builtin__
 def bool_def(value=None):
   if isinstance(value, bool):
@@ -21,6 +22,11 @@ module = Module(
     Value('str', StringType.get_type()),
     Value('list', ListType),
     Value('dict', DictType),
+    Value('None', None),
+    Value('True', True),
+    Value('False', False),
+    Value('object', BaseObject),
+    Value('__import__', __builtin__.__import__),
   ]
 )
 def export_module(g):

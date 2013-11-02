@@ -1,4 +1,5 @@
-import __hook_imp__.builtin_types as t
+import builtin_types as t
+from traced_frame import TracedFunction
 
 def num_const(value):
   if type(value) == float:
