@@ -21,14 +21,26 @@ class SnapshotableMetaClass(type):
       # That's inefficient to track if __dict__ is changed in user-defined
       # __setattr__, so always trigger notify_update
       def __setattr__(self, key, value):
-        f(self, key, value)
         notify_update(self)
+        f(self, key, value)
       defs['__setattr__'] = __setattr__
     else:
       def __setattr__(self, key, value):
-        self.__dict__[key] = value
         notify_update(self)
+        self.__dict__[key] = value
       defs['__setattr__'] = __setattr__
+    # Track when attribute is removed
+    d = SnapshotableMetaClass.find_method('__delattr__', bases, defs)
+    if d is not None:
+      def __delattr__(self, key, value):
+        notify_update(self)
+        d(self, key, value)
+      defs['__delattr__'] = __delattr__
+    else:
+      def __delattr__(self, key, value):
+        notify_update(self)
+        self.__dict__[key] = value
+      defs['__delattr__'] = __delattr__
 
     init = SnapshotableMetaClass.find_method('__init__', bases, defs)
     # Track when instance is created, add it before any __init__ calls
@@ -60,6 +72,9 @@ class BaseObject(Snapshotable):
   def __setattr__(self, key, value):
     notify_update(self)
     super(BaseObject, self).__setattr__(key, value)
+  def __delattr__(self, key):
+    notify_update(self)
+    super(BaseObject, self).__delattr__(key)
   def __make__(self):
     if hasattr(self, '__slots__'):
       slots = self.__slots__
