@@ -21,7 +21,6 @@ class RevisionManager(object):
     self.cur_rev = self.root
     self.traced_frame = None
     self.changed_objs = WeakValueDictionary()
-    self.last_obj_rev = {}
     self.replay_lock = RevisionManager.ReplayLock(self)
 
   def get_rev_id(self):
@@ -32,10 +31,8 @@ class RevisionManager(object):
     from revision import Revision
     new_rev = Revision(self.cur_rev, self)
     for obj in self.changed_objs.itervalues():
-      old_rev = self.get_last_obj_rev(obj)
-      new_rev.take_snapshot(old_rev, obj)
+      new_rev.take_snapshot(obj)
       #print obj.__class__, 'commited'
-      self.set_last_obj_rev(obj, new_rev)
     self.changed_objs.clear()
     self.cur_rev = new_rev
     #print 'Commit to', new_rev
@@ -78,11 +75,6 @@ class RevisionManager(object):
     self.push_to_rev(rev.back)
     rev.replay()
     self.cur_rev = rev
-
-  def get_last_obj_rev(self, obj):
-    return self.last_obj_rev.get(id(obj), None)
-  def set_last_obj_rev(self, obj, rev):
-    self.last_obj_rev[id(obj)] = rev
 
   def notify_update(self, obj):
     assert not isinstance(obj, Immutable)

@@ -56,8 +56,7 @@ def restore_snapshot(obj, value, cur = None):
     restore_as_dict(obj, value, cur)
 
 def restore_as_dict(obj, value, cur = None):
-  if cur:
-    for attr in set(cur.keys()) - set(value.keys()):
-      delattr(obj, attr)
+  for attr in set(obj.__dict__.keys()) - set(value.keys()):
+    delattr(obj, attr)
   for key, v in value.iteritems():
     setattr(obj, key, v)

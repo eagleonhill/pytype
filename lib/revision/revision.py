@@ -11,35 +11,41 @@ class Revision:
     self.frame_info = None
     self.objs = {}
     self.id = self.rm.get_rev_id()
-  def take_snapshot(self, last_rev, obj):
-    self.objs[id(obj)] = last_rev, obj, make_snapshot(obj)
+  def take_snapshot(self, obj):
+    value = make_snapshot(obj)
+    self.objs[id(obj)] = obj, value
+    #print self, 'has', obj, value
   def replay_revision(self):
     #print 'Replaying', self
     assert self.rm.is_clean, "Uncommitted change"
     assert self.rm.cur_rev == self.back
-    for rev, obj, value in self.objs.itervalues():
-      self.replay(obj)
+    for obj, value in self.objs.itervalues():
+      self.replay(obj, value=value)
     self.rm.cur_rev = self
-  def replay(self, obj = None, oldvalue = None):
+  def replay(self, obj = None, curvalue = None, value=None):
     if obj is None:
       self.replay_revision()
       return
-    rev, obj2, value = self.objs[id(obj)]
-    assert obj2 is obj
-    if oldvalue is None:
-      if rev:
-        oldrev, obj2, oldvalue = rev.objs[id(obj)]
-        assert obj2 is obj
+    if value is None:
+      obj2, value = self.objs[id(obj)]
+      assert obj2 is obj
     with self.rm.replay_lock:
-      restore_snapshot(obj, value, oldvalue)
+      #print obj, 'revert from', curvalue, 'to', value
+      restore_snapshot(obj, value, curvalue)
   def rollback(self):
     #print 'Rollback', self
-    for rev, obj, value in self.objs.itervalues():
-      if rev is not None:
-        rev.replay(obj, value)
-      else:
-        # The object is new created. It shouldn't be referenced after rollback
+    assert self.back, 'Cannot rollback root'
+    for obj, value in self.objs.itervalues():
+      if not self.back.__rollback_obj(obj, value):
+        #print obj, 'not reverted from', self, value, self.back
         pass
-
+  def __rollback_obj(self, obj, curvalue):
+    if id(obj) in self.objs:
+      self.replay(obj, curvalue=curvalue)
+      return True
+    elif self.back:
+      return self.back.__rollback_obj(obj, curvalue)
+    else:
+      return False
   def __str__(self):
     return '<revision %d>' % self.id

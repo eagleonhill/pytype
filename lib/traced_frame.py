@@ -166,7 +166,7 @@ def TracedFunction(func):
     if cur_frame.has_more_decisions():
       return cur_frame.get_next_call_decision()
     frame = TracedFrame(cur_frame)
-    rev = get_revisions().cur_rev
+    rev = get_revisions().commit()
     while frame.next_path():
       with frame:
         get_revisions().set_rev(rev)

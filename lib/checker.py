@@ -8,6 +8,8 @@ def attr_error(value, attr):
   raise_checker_error(AttributeError(value, attr))
 def argument_error(args, pattern):
   raise_checker_error(TypeError(args, pattern))
+def key_error(key):
+  raise_checker_error(KeyError(key))
 
 def is_internal_error(exc_type, exc_value, traceback):
   t = traceback
