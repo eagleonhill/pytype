@@ -26,4 +26,4 @@ while frame.next_path():
   g = lib.hook_builtins.get_globals('__main__')
   with frame:
     exec mod in g
-frame.result.dump_exceptions()
+frame.result.dump_exceptions(hide_internal=True)

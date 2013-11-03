@@ -25,6 +25,8 @@ class TracedFrame:
     elif exc_type is TracedFrame.ImpossiblePathError:
       return True
     elif exc_type:
+      if checker.is_internal_error(exc_type, exc_value, traceback):
+        return False
       self.result.add_exception(exc_type, exc_value, traceback)
       return True
   def next_path(self):
@@ -131,7 +133,7 @@ class FunctionDecision(DecisionSet):
       print >> target, 'Returns:'
       for x, rev in self.return_values:
         print >> target, '  ', repr(x)
-  def dump_exceptions(self, target = None):
+  def dump_exceptions(self, target = None, hide_internal=False):
     if target is None:
       import sys
       target = sys.stderr
@@ -146,7 +148,9 @@ class FunctionDecision(DecisionSet):
         else:
           print >> target, '==========================================='
         import traceback
-        traceback.print_exception(exc_type, exc_value, tb)
+        target.write(''.join(
+            checker.format_traceback(tb, hide_internal) + \
+            traceback.format_exception_only(exc_type, exc_value)))
   def dump(self, target = None):
     if target is None:
       import sys

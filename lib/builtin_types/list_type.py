@@ -33,7 +33,7 @@ class UndeterminedList:
     return any(map(lambda x: type_equal(x, element), self._types))
   
   def __add__(self, other):
-    new = List(self)
+    new = UndeterminedList(self)
     new += other
     return new
 

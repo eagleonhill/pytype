@@ -1,6 +1,6 @@
 from defs import *
 import defs
-from ..checker import type_equal, type_error
+from ..checker import type_equal, type_error, key_error
 from ..type_value import get_determined_value, hooked_isinstance, is_determined
 from ..snapshot import SDict, SList, SnapshotableMetaClass
 
@@ -30,7 +30,10 @@ class UndeterminedDict:
 
   def __getitem__(self, key):
     if is_determined(key) and not self._typeinfo_only():
-      return self._items[get_determined_value(key)][1]
+      try:
+        return self._items[get_determined_value(key)][1]
+      except KeyError:
+        key_error(get_determined_value(key))
     else:
       value_types = self._get_value_type(key)
       if len(value_types) == 1:
