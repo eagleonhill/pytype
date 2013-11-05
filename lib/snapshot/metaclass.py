@@ -32,14 +32,14 @@ class SnapshotableMetaClass(type):
     # Track when attribute is removed
     d = SnapshotableMetaClass.find_method('__delattr__', bases, defs)
     if d is not None:
-      def __delattr__(self, key, value):
+      def __delattr__(self, key):
         notify_update(self)
-        d(self, key, value)
+        d(self, key)
       defs['__delattr__'] = __delattr__
     else:
-      def __delattr__(self, key, value):
+      def __delattr__(self, key):
         notify_update(self)
-        self.__dict__[key] = value
+        del self.__dict__[key]
       defs['__delattr__'] = __delattr__
 
     init = SnapshotableMetaClass.find_method('__init__', bases, defs)
