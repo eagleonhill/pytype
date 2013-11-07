@@ -30,11 +30,11 @@ class SList(UserList, Snapshotable):
 
   def __iadd__(self, other):
     notify_update(self)
-    UserList.__iadd__(self, other)
+    return UserList.__iadd__(self, other)
 
   def __imul__(self, other):
     notify_update(self)
-    UserList.__imul__(self, other)
+    return UserList.__imul__(self, other)
   def append(self, item): notify_update(self);self.data.append(item)
   def insert(self, i, item): notify_update(self);self.data.insert(i, item)
   def pop(self, i=-1): notify_update(self);return self.data.pop(i)
@@ -44,3 +44,10 @@ class SList(UserList, Snapshotable):
   def extend(self, other):
     notify_update(self)
     UserList.extend(self, other)
+  def __makefits__(self, other):
+    from ..makefits import FittingFailedException,\
+        type_make_fit_internal
+    if len(self) != len(other):
+      raise FittingFailedException
+    for a, b in zip(self.data, other.data):
+      type_make_fit_internal(a, b)

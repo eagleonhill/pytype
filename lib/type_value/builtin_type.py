@@ -128,6 +128,21 @@ class BuiltinObjInstance:
     assert not is_determined(self), 'Already have a value'
     assert self._type.check_value(value), "Not accepting " + repr(value)
     self._value = value
+  def __makefits__(self, value):
+    from ..makefits import FittingFailedException
+    if self._type is not value._type:
+      raise FittingFailedException
+    # Discard all compare history
+    if is_determined(self) and is_determined(value):
+      if self._value != value._value:
+        self._value = None
+      else:
+        return
+    self._value = None
+    try:
+      del self._CompareHistory__comparer
+    except AttributeError:
+      pass
 
 def is_determined(obj):
   if not hasattr(obj, '_pytypecheck_is_determined'):

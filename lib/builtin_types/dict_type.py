@@ -1,6 +1,6 @@
 from defs import *
 import defs
-from ..checker import type_equal, type_error, reraise_error
+from ..checker import type_equal, type_error, reraise_error, key_error
 from ..type_value import get_determined_value, hooked_isinstance, is_determined
 from ..snapshot import SDict, SList, SnapshotableMetaClass
 
@@ -25,7 +25,7 @@ class UndeterminedDict:
       self._items[get_determined_value(key)] = (key, value)
     if not is_determined(key):
       # Keep type info only
-      self._items = {}
+      self._items = SDict()
     self._add_type(key, value)
 
   def __getitem__(self, key):
@@ -34,17 +34,20 @@ class UndeterminedDict:
         return self._items[get_determined_value(key)][1]
       except KeyError:
         reraise_error()
-    else:
-      value_types = self._get_value_type(key)
-      if len(value_types) == 1:
-        return value_types[0]
-      raise NotImplementedError()
+    value_types = self._get_value_type(key)
+    if len(value_types) == 0:
+      key_error(key)
+
+    cur_frame = get_current_frame()
+    if not cur_frame.has_more_decisions():
+      d = FunctionDecision(sideeffect=False)
+      for t in value_types:
+        d.add_return_value(t)
+      cur_frame.add_decision(d)
+    return cur_frame.get_next_decision(FunctionDecision)
 
   def __iter__(self):
-    if self._typeinfo_only():
-      raise NotImplementedError();
-    else:
-      return self._items.__iter__()
+    return self.keys().__iter__()
 
   def _add_type(self, key, value):
     if not self._has_type(key, value):
@@ -71,17 +74,23 @@ class UndeterminedDict:
   def update(self, other):
     if not isinstance(other, UndeterminedDict):
       checker.type_error(other, UndeterminedDict)
-    if other._typeinfo_only() or self._typeinfo_only:
-      self._items = {}
+    if other._typeinfo_only() or self._typeinfo_only():
+      self._items = SDict()
     else:
       self._items.update(other._items)
     self._types += filter(lambda x: not self._has_type_pair(x), other._types)
 
   def keys(self):
     if not self._typeinfo_only():
+      return map(lambda x: x[0], self._items.values())
+    else:
+      return [x[0] for x in self._types]
+
+  def values(self):
+    if not self._typeinfo_only():
       return map(lambda x: x[1], self._items.values())
     else:
-      raise NotImplementedError()
+      return [x[1] for x in self._types]
 
   def __len__(self):
     if self._typeinfo_only():
@@ -129,6 +138,15 @@ class UndeterminedDict:
         # Make it non empty
         self._maybeempty = False
         return True
+
+  def __makefits__(self, other):
+    from ..makefits import type_make_fit, type_make_fit_internal
+    if not self._typeinfo_only() and not other._typeinfo_only():
+      if type_make_fit(self._items, other._items):
+        return
+    # Type info only
+    self._items.clear()
+    self.update(other)
 
 UndeterminedDict.__name__ = 'dict'
 defs.DictType = UndeterminedDict
