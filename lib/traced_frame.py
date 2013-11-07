@@ -96,30 +96,30 @@ class BooleanDecision(DecisionSet):
     return self.value
 
 class FunctionDecision(DecisionSet):
-  def __init__(self):
+  def __init__(self, sideeffect = True):
     self.return_values = []
-    self.start_revision = get_revisions().commit()
     self.exceptions = []
+    self.sideeffect = sideeffect
+    if self.sideeffect:
+      self.start_revision = get_revisions().commit()
     self.index = 0
   def add_exception(self, exc_type, exc_value, traceback):
-    revision = get_revisions().commit()
+    revision = self.get_rev()
     self.exceptions.append((exc_type, exc_value, traceback, revision))
   def add_return_value(self, value):
-    revision = get_revisions().commit()
+    revision = self.get_rev()
     self.return_values.append((value, revision))
   def has_next(self):
     return self.index + 1 < len(self.return_values) + len(self.exceptions)
   def current(self):
     if self.index < len(self.return_values):
       ret, revision = self.return_values[self.index]
-      get_revisions().discard()
-      get_revisions().set_rev(revision)
+      self.set_rev(revision)
       return ret
     else:
       i = self.index - len(self.return_values)
       exc_type, exc_value, traceback, revision = self.exceptions[i]
-      get_revisions().discard()
-      get_revisions().set_rev(revision)
+      self.set_rev(revision)
       raise exc_type, exc_value, traceback
   def goto_next(self):
     self.index += 1
@@ -158,6 +158,16 @@ class FunctionDecision(DecisionSet):
     self.dump_return_values(target)
     print >> target, '==========================================='
     self.dump_exceptions(target)
+
+  def get_rev(self):
+    if self.sideeffect:
+      return get_revisions().commit()
+    else:
+      return None
+  def set_rev(self, revision):
+    if self.sideeffect:
+      get_revisions().discard()
+      get_revisions().set_rev(revision)
 
 def TracedFunction(func):
   def traced_func_call(*args, **kargs):
