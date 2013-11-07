@@ -1,5 +1,9 @@
 def raise_checker_error(exc_type, exc_value = None, traceback=None):
   raise exc_type, exc_value, traceback
+def reraise_error():
+  import sys
+  exc_info = sys.exc_info()
+  raise_checker_error(*exc_info)
 def type_error(value, expected_type):
   raise_checker_error(TypeError(value, expected_type))
 def convert_error(f, t):
