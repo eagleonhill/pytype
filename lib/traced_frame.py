@@ -44,18 +44,18 @@ class TracedFrame:
     else:
       return False
 
+  def get_next_decision(self, typecheck = None):
+    assert self.has_more_decisions()
+    d = self.pop_decision()
+    if typecheck is not None:
+      assert isinstance(d, typecheck)
+    return d.current()
   def get_next_bool_decision(self):
     if not self.has_more_decisions():
       self.add_decision(BooleanDecision())
-    d = self.pop_decision()
-    assert isinstance(d, BooleanDecision)
-    return d.current()
+    return get_next_decision(BooleanDecision)
   def get_next_call_decision(self):
-    assert self.has_more_decisions()
-    d = self.pop_decision()
-    assert isinstance(d, FunctionDecision), 'Expecting function decision ' +\
-        repr(d) + repr( self.decision_made) + repr(self.decision_list)
-    return d.current()
+    return get_next_decision(FunctionDecision)
   def add_decision(self, decision):
     assert not self.has_more_decisions()
     self.decision_list.append(decision)
