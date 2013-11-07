@@ -1,5 +1,5 @@
 from types import ClassType, InstanceType
-from ..checker import notify_update
+from ..checker import notify_update, attr_error
 from base import Snapshotable, restore_as_dict
 
 class SnapshotableMetaClass(type):
@@ -39,7 +39,10 @@ class SnapshotableMetaClass(type):
     else:
       def __delattr__(self, key):
         notify_update(self)
-        del self.__dict__[key]
+        try:
+          del self.__dict__[key]
+        except KeyError:
+          attr_error(self, key)
       defs['__delattr__'] = __delattr__
 
     init = SnapshotableMetaClass.find_method('__init__', bases, defs)
