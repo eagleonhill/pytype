@@ -1,7 +1,7 @@
 from defs import *
 import defs
 from ..checker import type_equal, type_error, reraise_error, key_error
-from ..type_value import get_determined_value, hooked_isinstance, is_determined
+from ..type_value import get_determined_value, is_determined
 from ..snapshot import SDict, SList, SnapshotableMetaClass
 
 class UndeterminedDict:
@@ -117,7 +117,7 @@ class UndeterminedDict:
       raise Exception('Expecting determined keys in kwargs')
     d = {}
     for key, value in self._items.itervalues():
-      if not hooked_isinstance(key, str):
+      if not isinstance(key, StringType):
         type_error(key, StringType)
       d[get_determined_value(key)] = value
     return d

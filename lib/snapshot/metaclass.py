@@ -1,8 +1,9 @@
 from types import ClassType, InstanceType
-from ..checker import notify_update, attr_error
+from ..checker import notify_update, attr_error, raise_checker_error
 from base import Snapshotable, restore_as_dict
 
 class SnapshotableMetaClass(type):
+  __defining_baseobject = True
   @staticmethod
   def find_method(name, bases, defs):
     f = defs.get(name)
@@ -58,16 +59,27 @@ class SnapshotableMetaClass(type):
       defs['__init__'] = __init__
 
   def __new__(cls, name, bases, defs):
-    if any(map(lambda x: isinstance(SnapshotableMetaClass, x), bases)):
-      # BaseObject is a base type
-      t = super(SnapshotableMetaClass, cls).__new__(name, bases, defs)
-      assert issubclass(t, BaseObject)
+    defs.setdefault('_SnapshotableMetaClass__builtin', False)
+    if not SnapshotableMetaClass.__defining_baseobject:
+      if BaseObject not in bases:
+        bases = bases + (BaseObject, )
     else:
-      cls.update_classobj(name, bases, defs)
-      t = ClassType(name, bases, defs)
+      SnapshotableMetaClass.__defining_baseobject = False
+    t = super(SnapshotableMetaClass, cls).__new__(cls, name, bases, defs)
     return t
 
-class BaseObject(Snapshotable):
+  def __setattr__(self, name, value):
+    if self.__builtin:
+      raise_checker_error(TypeError, \
+          "can't set attributes of built-in/extension type %s" %\
+          self.__name__)
+    super(SnapshotableMetaClass, self).__setattr__(name, value)
+
+  def _pytype_make_internal_type(self):
+    self.__builtin = True
+
+class BaseObject(object):
+  __metaclass__ = SnapshotableMetaClass
   def __new__(cls, *args, **kwds):
     x = super(BaseObject, cls).__new__(cls, *args, **kwds)
     notify_update(x)
@@ -93,3 +105,7 @@ class BaseObject(Snapshotable):
 
   def __restore__(self, value, cur):
     restore_as_dict(self, value, cur)
+
+BaseObject._pytype_make_internal_type()
+
+Snapshotable.register(BaseObject)

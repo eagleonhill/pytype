@@ -47,17 +47,19 @@ strType = Type('str', (str, ), [
   Func('zfill', ['i'], 's'),
 ])
 
-strType.rebuild(StringType)
+strType.rebuild(StringTypeInternal)
 
 def str_coerce(left, right):
-  if isinstance(right, StringType.get_type()):
+  if isinstance(right, StringType):
     return (left, right)
   else:
     return NotImplemented
 
-StringType.add_stub_function('__coerce__', str_coerce)
+StringTypeInternal.add_stub_function('__coerce__', str_coerce)
 
 def str_nonzero(value):
   return value != StringType.create_from_value('')
 
-StringType.add_stub_function('__nonzero__', str_nonzero)
+StringTypeInternal.add_stub_function('__nonzero__', str_nonzero)
+StringTypeInternal.add_default_compare()
+StringTypeInternal.update_type(StringType)

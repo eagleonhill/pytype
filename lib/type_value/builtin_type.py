@@ -1,13 +1,14 @@
 from base import *
 from .. import checker
-from ..snapshot import SnapshotableMetaClass, Snapshotable, Immutable
+from ..snapshot import SnapshotableMetaClass, Snapshotable, Immutable,\
+    BaseObject
 
 # Implementation of type in C
 class BuiltinTypeInternal(Immutable):
   def __init__(self, name, base):
     self.attr = {}
     self.base = base
-    self.name = name
+    self.name = 'hook' + name
     self.export = None
 
   def check_value(self, value):
@@ -17,34 +18,24 @@ class BuiltinTypeInternal(Immutable):
     import compare_func
     if name in self.attr:
       return self.attr[name]
-    elif name in compare_func.default_cmp:
-      return compare_func.default_cmp[name]
     else:
       checker.attr_error(self, name)
       return BadType()
 
-  def create_from_value(self, value):
-    assert self.check_value(value), \
-        "{0} don't accept type {1}".format(self, value)
-    return BuiltinObjInstance(self, value)
-  def create_undetermined(self):
-    return BuiltinObjInstance(self)
-
-  def __repr__(self):
-    return 'hooked class of ' + self.name
-  def __str__(self):
-    return 'class of ' + self.name
-
   def add_unary_operator(self, op, returnType = None):
     if returnType is None:
-      returnType = self
+      returnType = self.create_type()
     self.add_function(op, [], returnType)
+
+  def add_default_compare(self):
+    from compare_func import default_cmp
+    self.attr.update(default_cmp)
 
   def add_binary_operator(self, op, returnType = None, otherType = None): 
     if returnType is None: 
-      returnType = self
+      returnType = self.create_type()
     if otherType is None: 
-      otherType = self
+      otherType = self.create_type()
     self.add_function(op, [otherType], returnType)
 
   def add_function(self, op, args, returnType, optionalArgs = None):
@@ -66,72 +57,43 @@ class BuiltinTypeInternal(Immutable):
   def match(self, other):
     return self is other
 
-  def get_type(self):
-    if self.export == None:
-      self.export = BuiltinType(self)
+  def update_type(self, t):
+    for key in self.attr:
+      setattr(t, key, self.attr[key])
+    # t can't be changed any more
+    t._pytype_make_internal_type()
+
+  def create_type(self):
+    if self.export is None:
+      self.export = SnapshotableMetaClass(\
+          self.name, (BuiltinObjInstance,), \
+          {'_internal': self})
     return self.export
 
-  def __str__(self):
-    return 'type ' + self.name
-
-class BuiltinType(type):
-  def __new__(cls, t):
-    val = super(BuiltinType, cls).__new__(cls, t.name, (t.base[0], ), {})
-    val.__type = t
-    t.export = val
-    return val
-  def __getattr__(self, name):
-    from func_value import InstanceFunc, FuncValue
-    val = self.__type.get_attr(name)
-    if isinstance(val, FuncValue):
-      val = InstanceFunc(val, self)
-    return val
-
-  def __call__(self, *args, **kargs):
-    val = self.__type.get_attr('__new__')(self, *args, **kargs)
-    return val
-
 # Instance of builtin type, contains no public values
-class BuiltinObjInstance:
+class BuiltinObjInstance(BaseObject):
   __metaclass__ = SnapshotableMetaClass
-  #__slots__ = ['_type']
-  def __init__(self, t, value = None):
-    self._type = t
-    self._value = value
-  def __getattr__(self, name):
-    return self._get_type_attr(name)
-  def _get_type_attr(self, name):
-    from func_type import InstanceFunc, FuncValue
-    val = self._type.get_attr(name)
-    if isinstance(val, FuncValue):
-      val = InstanceFunc(val, self)
-    return val
-  def __typeeq__(self, other):
-    if not isinstance(other, BuiltinObjInstance):
-      return False
-    return self._type is other._type
   def _pytypecheck_get_value(self):
     return self._value
   def _pytypecheck_is_determined(self):
     return self._value is not None
+  # Should be removed, for debugging only at this stage
   def __str__(self):
     if is_determined(self):
-      return '(' + str(self._type) + ': ' + str(self._value) + ')'
+      return '(' + type(self).__name__ + ': ' + str(self._value) + ')'
     else:
-      return '(Undetermined ' + str(self._type) + ')'
+      return '(Undetermined ' + type(self).__name__ + ')'
   def __repr__(self):
     if is_determined(self):
-      return '(' + str(self._type) + ': ' + str(self._value) + ')'
+      return '(' + type(self).__name__ + ': ' + str(self._value) + ')'
     else:
-      return '(Undetermined ' + str(self._type) + ')'
+      return '(Undetermined ' + type(self).__name__ + ')'
   def _make_determined(self, value):
     assert not is_determined(self), 'Already have a value'
-    assert self._type.check_value(value), "Not accepting " + repr(value)
+    assert type(self)._internal.check_value(value),\
+        "Not accepting " + repr(value)
     self._value = value
   def __makefits__(self, value):
-    from ..makefits import FittingFailedException
-    if self._type is not value._type:
-      raise FittingFailedException
     # Discard all compare history
     if is_determined(self) and is_determined(value):
       if self._value != value._value:
@@ -143,6 +105,18 @@ class BuiltinObjInstance:
       del self._CompareHistory__comparer
     except AttributeError:
       pass
+  @classmethod
+  def create_from_value(cls, value):
+    assert cls._internal.check_value(value), \
+        "{0} don't accept type {1}".format(cls, value)
+    v = super(BuiltinObjInstance, cls).__new__(cls)
+    v._value = value
+    return v
+  @classmethod
+  def create_undetermined(cls):
+    v = super(BuiltinObjInstance, cls).__new__(cls)
+    v._value = None
+    return v
 
 def is_determined(obj):
   if not hasattr(obj, '_pytypecheck_is_determined'):

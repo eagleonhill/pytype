@@ -1,8 +1,6 @@
-from builtin_type import BuiltinType, BuiltinTypeInternal
-from func_type import BuiltinFunc, InstanceFunc
-import sys
-
-sys_module = type(sys)
+from builtin_type import BuiltinTypeInternal
+from func_type import BuiltinFunc
+from types import ModuleType
 
 class Module:
   def __init__(self, real, defs):
@@ -11,12 +9,10 @@ class Module:
     # Should be topmost
     self.name = real.__name__
   def build(self, parent = None):
-    ret = sys_module(self.name, self.real.__doc__)
+    ret = ModuleType(self.name, self.real.__doc__)
     for d in self.defs:
       name = d.name
       value = d.build(self)
-      if isinstance(value, BuiltinFunc):
-        value = InstanceFunc(value, ret)
       setattr(ret, name, value)
     return ret
 

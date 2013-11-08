@@ -1,9 +1,9 @@
 import checker
-from ..snapshot import SWeakKeyDictionary, SWeakValueDictionary,\
+from ..snapshot import SWeakKeyDictionary, SDict,\
     SnapshotableMetaClass
-from base import hooked_isinstance
 from builtin_type import get_determined_value, is_determined, BuiltinObjInstance
 from func_type import StubFunc
+from ..builtin_types.defs import IntType, FloatType
 
 class CompareHistory:
   __metaclass__ = SnapshotableMetaClass
@@ -38,7 +38,7 @@ class CompareHistory:
     self.low_inclusive = True
     self.high = None
     self.high_inclusive = True
-    self.nonequal = SWeakValueDictionary()
+    self.nonequal = SDict()
 
     # Compare to undertermined value
     self.comp = SWeakKeyDictionary()
@@ -47,6 +47,7 @@ class CompareHistory:
     if s == set([0]):
       del self.value.__comparer
       self.value._make_determined(value)
+      return
     elif s == set([-1]):
       # self < value
       if self.high is None or value <= self.high:
@@ -69,14 +70,14 @@ class CompareHistory:
         self.low_inclusive = True
     elif s == set([-1, 1]):
       # self != value
-      self.nonequal[id(value)] = value
+      self.nonequal[value] = True
     if self.low == self.high and self.low is not None:
       if self.low_inclusive and self.high_inclusive:
         del self.value.__comparer
         self.value._make_determined(self.low)
       else:
-        # Should be avoided on compare
-        assert False, 'Impossible path'
+        # Shouldn't happen
+        assert False, 'Inconsistent compare result'
         checker.impossible_path()
 
   def compare_variable(self, other, operator):
@@ -116,7 +117,7 @@ class CompareHistory:
       elif self.high == other and self.high_inclusive:
         # self <= other
         s &= set([-1, 0])
-    if id(other) in self.nonequal:
+    if other in self.nonequal:
       s &= set([-1, 1])
     trues = self.operatormap[operator]
     falses = set([0, 1, -1]) - trues
@@ -144,20 +145,21 @@ class CompareHistory:
     else:
       return self.compare_variable(other, operator)
 
+NumerialTypes = (IntType, FloatType)
 def type_comparable(x, y):
-  if checker.type_equal(x, y):
+  if type(x) == type(y):
     return True
-  if hooked_isinstance(x, (int, long, float)) and \
-      hooked_isinstance(y, (int, long, float)):
+  if isinstance(x, NumerialTypes) and \
+      isinstance(y, NumerialTypes):
     return True
   return False
 
 def system_compare(x, y):
   # When x and y are not comparable
   # Numbers are smallest
-  if hooked_isinstance(x, (int, float, long)):
+  if isinstance(x, NumerialTypes):
     return -1
-  if hooked_isinstance(y, (int, float, long)):
+  if isinstance(y, NumerialTypes):
     return 1
   if x.__class__ == BuiltinObjInstance:
     type_x = x._type.name

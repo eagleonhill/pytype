@@ -1,5 +1,5 @@
 import checker
-from base import BadType, hooked_isinstance
+from base import BadType
 from builtin_type import get_determined_value, is_determined
 
 class InvokePattern(object):
@@ -22,10 +22,17 @@ class InvokePattern(object):
   def get_result(self, args):
     pass
 
-class FuncValue:
+class FuncValue(object):
   def __typeeq__(self, other):
     # TODO check parameters
     return isinstance(other, (InstanceFunc, FuncValue))
+  def __get__(self, instance, owner):
+    from types import MethodType
+    if instance is None:
+      return self
+    else:
+      return MethodType(self, instance, owner)
+
 
 # Function created by 'def'
 class UserFunc(FuncValue):
@@ -64,13 +71,6 @@ class BuiltinInvokePattern(InvokePattern):
     if optional_args is None:
       optional_args = []
     from builtin_type import BuiltinTypeInternal
-    def convert(x):
-      if isinstance(x, BuiltinTypeInternal):
-        return x.base
-      else:
-        return x
-    args = map(convert, args)
-    optional_args = map(convert, optional_args)
     self.args = args
     self.optional_args = optional_args
     self.all_args = args + optional_args
@@ -79,7 +79,7 @@ class BuiltinInvokePattern(InvokePattern):
   def match(self, args):
     if len(args) < len(self.args) or len(args) > len(self.all_args):
       return False
-    return all(map(hooked_isinstance, args, self.all_args))
+    return all(map(isinstance, args, self.all_args[:len(args)]))
   
   @classmethod
   def create_from_format(cls, formatstr, args, return_type):
@@ -108,16 +108,15 @@ class FormatStrParser:
           'b': b.BoolType,
           's': b.StringType,
           'i': b.IntType,
-          'l': b.IndexType,
           'f': b.FloatType,
           't': None,
           }
       cls.mapping = {
           'b': (bool,),
-          's': (str,),
-          'i': (int, long),
-          'l': (b.IndexType,),
-          'f': (float,),
+          's': (b.StringType,),
+          'i': (b.IntType,),
+          'l': (b.IntType,),
+          'f': (b.FloatType,),
           't': None
           }
 
@@ -168,10 +167,13 @@ class BuiltinFunc(FuncValue):
     self.call_default = True
     self.name = name
     self.patterns = []
+    self.real_func = None
 
-  def set_attribute(self, call_default = True, sideeffect = False):
+  def set_attribute(self, call_default = True, sideeffect = False,\
+      real_func=None):
     self.call_default = call_default
     self.sideeffect = sideeffect
+    self.real_func = real_func
   
   def add_from_format_str(self, formatstr, args, return_type):
     self.patterns.append(
@@ -183,8 +185,8 @@ class BuiltinFunc(FuncValue):
   def __str__(self):
     return self.name
 
-  def can_invoke_stub(self, context, args):
-    return self.call_default and all(map(is_determined, (context, ) + args))
+  def can_invoke_stub(self, args):
+    return self.call_default and all(map(is_determined, args))
 
   def get_matched_pattern(self, args):
     f = filter(lambda x: x.match(args), self.patterns)
@@ -192,22 +194,35 @@ class BuiltinFunc(FuncValue):
       return None
     else:
       return f[0]
-  def __call__(self, context, *args):
-    pattern = self.get_matched_pattern(args)
-    if pattern is None:
-      checker.argument_error(args, self.patterns)
 
-    if self.can_invoke_stub(context, args):
+  ReversableOps = set()
+  for op in ['add', 'sub', 'mul', 'div', 'floordiv', 'mod', 'pow',
+      'lshift', 'rshift', 'and', 'xor', 'or']:
+    ReversableOps.add('__%s__' % op)
+    ReversableOps.add('__r%s__' % op)
+
+  def has_reverve_op(self):
+    return self.name in self.ReversableOps
+
+  def __call__(self, *args):
+    # Bound method will do check at first
+    assert self.real_func is not None or len(args) >= 0
+
+    rargs = args[1:] if self.real_func is None else args
+    pattern = self.get_matched_pattern(rargs)
+    if pattern is None:
+      if self.real_func is None and self.has_reverve_op():
+        return NotImplemented
+      checker.argument_error(rargs, self.patterns)
+
+    if self.can_invoke_stub(args):
       vargs = map(get_determined_value, args)
-      value = (getattr(get_determined_value(context), self.name)(*vargs))
+      if self.real_func is None:
+        context = vargs[0]
+        value = getattr(context, self.name)(*vargs[1:])
+      else:
+        value = self.real_func(*vargs)
       return pattern.return_type.create_from_value(value)
     else:
+      # TODO: Make self undetermined if it has sideeffect
       return pattern.return_type.create_undetermined()
-
-class InstanceFunc(FuncValue):
-  def __init__(self, func, context):
-    self.func = func
-    self.context = context
-  def __call__(self, *args, **kargs):
-    return self.func(self.context, *args, **kargs)
-

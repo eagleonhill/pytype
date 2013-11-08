@@ -20,6 +20,7 @@ class Immutable(Snapshotable):
 Snapshotable.register(InstanceType)
 Immutable.register(int)
 Immutable.register(long)
+Immutable.register(float)
 Immutable.register(str)
 Immutable.register(unicode)
 Immutable.register(tuple)
