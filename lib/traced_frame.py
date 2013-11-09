@@ -55,7 +55,7 @@ class TracedFrame:
       self.add_decision(BooleanDecision())
     return self.get_next_decision(BooleanDecision)
   def get_next_call_decision(self):
-    return get_next_decision(FunctionDecision)
+    return self.get_next_decision(FunctionDecision)
   def add_decision(self, decision):
     assert not self.has_more_decisions()
     self.decision_list.append(decision)

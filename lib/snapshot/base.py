@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from types import InstanceType
+from weakref import ref
 
 class Snapshotable(object):
   __metaclass__ = ABCMeta
@@ -25,6 +26,7 @@ Immutable.register(str)
 Immutable.register(unicode)
 Immutable.register(tuple)
 Immutable.register(type(None))
+Immutable.register(ref)
 
 def snapshotable(obj):
   return isinstance(obj, Snapshotable) or type(obj) == InstanceType
@@ -39,12 +41,12 @@ def make_snapshot(obj):
     for attr, v in s.iteritems():
       assert snapshotable(v), \
           '%s \'s attribute %s of value %s is not snapshotable' %\
-          (repr(obj), attr, repr(v))
+          (type(obj), attr, type(v))
   elif isinstance(s, list):
     for element in s:
       assert snapshotable(element), \
           '%s \'s element %s is not snapshotable' %\
-          (repr(obj), repr(element))
+          (type(obj), type(element))
   return s
 
 def restore_snapshot(obj, value, cur = None):

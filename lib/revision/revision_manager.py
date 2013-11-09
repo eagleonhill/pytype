@@ -22,6 +22,7 @@ class RevisionManager(object):
     self.traced_frame = None
     self.changed_objs = WeakValueDictionary()
     self.replay_lock = RevisionManager.ReplayLock(self)
+    self.commiting = False
 
   def get_rev_id(self):
     self.rev_id += 1
@@ -29,12 +30,17 @@ class RevisionManager(object):
 
   def commit(self):
     from revision import Revision
+    self.commiting = True
     new_rev = Revision(self.cur_rev, self)
-    for obj in self.changed_objs.itervalues():
+    while True:
+      try:
+        key, obj = self.changed_objs.popitem()
+      except KeyError:
+        break
       new_rev.take_snapshot(obj)
       #print obj.__class__, 'commited'
-    self.changed_objs.clear()
     self.cur_rev = new_rev
+    self.commiting = False
     #print 'Commit to', new_rev
     return new_rev
 
@@ -78,6 +84,7 @@ class RevisionManager(object):
 
   def notify_update(self, obj):
     assert not isinstance(obj, Immutable)
+    assert not self.commiting
     if not self.replay_lock:
       self.changed_objs[id(obj)] = obj
 

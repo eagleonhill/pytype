@@ -5,6 +5,14 @@ from builtin_type import get_determined_value, is_determined, BuiltinObjInstance
 from func_type import StubFunc
 from ..builtin_types.defs import IntType, FloatType
 
+LT = 0b001
+EQ = 0b010
+GT = 0b100
+NE = 0b101
+LE = 0b011
+GE = 0b110
+ALL = 0b111
+
 class CompareHistory:
   __metaclass__ = SnapshotableMetaClass
   inverse_op = {
@@ -16,12 +24,12 @@ class CompareHistory:
       '__gt__': '__lt__',
       }
   operatormap = {
-      '__le__': frozenset([-1, 0]),
-      '__ge__': frozenset([1, 0]),
-      '__ne__': frozenset([-1, 1]),
-      '__eq__': frozenset([0]),
-      '__lt__': frozenset([-1]),
-      '__gt__': frozenset([1]),
+      '__le__': LE,
+      '__ge__': GE,
+      '__ne__': NE,
+      '__eq__': EQ,
+      '__lt__': LT,
+      '__gt__': GT,
       }
   @classmethod
   def get_comparer(cls, value):
@@ -44,31 +52,31 @@ class CompareHistory:
     self.comp = SWeakKeyDictionary()
 
   def update(self, value, s):
-    if s == set([0]):
+    if s == EQ:
       del self.value.__comparer
       self.value._make_determined(value)
       return
-    elif s == set([-1]):
+    elif s == LT:
       # self < value
       if self.high is None or value <= self.high:
         self.high = value
         self.high_inclusive = False
-    elif s == set([0, -1]):
+    elif s == LE:
       # self <= value
       if self.high is None or value < self.high:
         self.high = value
         self.high_inclusive = True
-    elif s == set([1]):
+    elif s == GT:
       # self > value
       if self.low is None or value >= self.low:
         self.low = value
         self.low_inclusive = False
-    elif s == set([0, 1]):
+    elif s == GE:
       # self >= value
       if self.low is None or value > self.low:
         self.low = value
         self.low_inclusive = True
-    elif s == set([-1, 1]):
+    elif s == NE:
       # self != value
       self.nonequal[value] = True
     if self.low == self.high and self.low is not None:
@@ -83,44 +91,53 @@ class CompareHistory:
   def compare_variable(self, other, operator):
     op = self.operatormap[operator]
     # Hash is unique for object
-    self.comp.setdefault(other, set([0, 1, -1]))
-    s = self.comp[other]
+    s = self.comp.get(other, ALL)
     trues = op & s
-    falses = (set([0, 1, -1]) - op) & s
+    falses = ALL & ~op & s
     if trues and falses:
+      # Both branch are possible
       if checker.fork():
         s &= trues
-        self.get_comparer(other).set_from_inverse(s)
+        self.comp[other] = s
+        self.get_comparer(other).set_from_inverse(self.value, s)
         return True
       else:
         s &= falses
-        self.get_comparer(other).set_from_inverse(s)
+        self.comp[other] = s
+        self.get_comparer(other).set_from_inverse(self.value, s)
         return False
     else:
       # No information gain
       return True if trues else False
 
+  def set_from_inverse(self, other, result):
+    s = self.comp.get(other, ALL)
+    # Reversed result
+    result = ALL & (result >> 2 | result << 2 | result & EQ)
+    s &= result
+    self.comp[other] = s
+
   def compare_constant(self, other, operator):
-    s = set([0, 1, -1])
+    s = ALL
     if self.low is not None:
       if self.low > other or self.low == other and not self.low_inclusive:
         # self > other
-        s = set([1])
+        s = GT
       elif self.low == other and self.low_inclusive:
         # self >= other
-        s = set([0, 1])
+        s = GE
 
     if self.high is not None:
       if self.high < other or self.high == other and not self.high_inclusive:
         # self < other
-        s &= set([-1])
+        s &= LT
       elif self.high == other and self.high_inclusive:
         # self <= other
-        s &= set([-1, 0])
+        s &= LE
     if other in self.nonequal:
-      s &= set([-1, 1])
+      s &= NE
     trues = self.operatormap[operator]
-    falses = set([0, 1, -1]) - trues
+    falses = ALL & ~trues
     trues &= s
     falses &= s
     if trues and falses:

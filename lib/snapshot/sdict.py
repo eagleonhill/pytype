@@ -26,7 +26,7 @@ class SDict(UserDict, Snapshotable):
 
   def setdefault(self, key, failobj=None):
     notify_update(self)
-    UserDict.setdefault(self, key, failobj)
+    return UserDict.setdefault(self, key, failobj)
 
   def pop(self, key, **kwargs):
     notify_update(self)
