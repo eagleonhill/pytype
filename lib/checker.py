@@ -1,4 +1,7 @@
 def raise_checker_error(exc_type, exc_value = None, traceback=None):
+  # If traceback is given, raise_checker_error is not in traceback
+  do_raise_checker_error(exc_type, exc_value, traceback)
+def do_raise_checker_error(exc_type, exc_value = None, traceback=None):
   raise exc_type, exc_value, traceback
 def reraise_error():
   import sys
@@ -18,9 +21,10 @@ def key_error(key):
 def is_internal_error(exc_type, exc_value, traceback):
   t = traceback
   while t.tb_next is not None:
+    if t.tb_frame.f_code is raise_checker_error.func_code:
+      return False
     t = t.tb_next
-  if is_internal_frame(t.tb_frame) and\
-      t.tb_frame.f_code != raise_checker_error.func_code:
+  if is_internal_frame(t.tb_frame):
     return True
   return False
 
