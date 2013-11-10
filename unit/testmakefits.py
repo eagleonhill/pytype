@@ -61,7 +61,7 @@ class MakeFitsTestCase(unittest.TestCase):
     a = DictType()
     a[keya] = IntType.create_from_value(4)
     self.assertTrue(type_make_fit(a, x))
-    self.assertTrue(a[keya]._type is IntType)
+    self.assertIsInstance(a[keya], IntType)
     self.assertFalse(is_determined(a[keya]))
     self.assertEquals(len(a._get_value_type(keya)), 1)
 
