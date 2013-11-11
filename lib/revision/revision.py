@@ -8,7 +8,6 @@ class Revision:
     else:
       assert not back or revision_manager is back.rm
     self.rm = revision_manager
-    self.frame_info = None
     self.objs = {}
     self.id = self.rm.get_rev_id()
   def take_snapshot(self, obj):

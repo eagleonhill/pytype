@@ -19,7 +19,6 @@ class RevisionManager(object):
     self.rev_id = -1
     self.root = Revision(None, self)
     self.cur_rev = self.root
-    self.traced_frame = None
     self.changed_objs = WeakValueDictionary()
     self.replay_lock = RevisionManager.ReplayLock(self)
     self.commiting = False
@@ -32,10 +31,10 @@ class RevisionManager(object):
     from revision import Revision
     self.commiting = True
     new_rev = Revision(self.cur_rev, self)
-    while True:
+    while self.changed_objs:
       try:
         key, obj = self.changed_objs.popitem()
-      except KeyError:
+      except KeyError: # Key may be deleted while popping
         break
       new_rev.take_snapshot(obj)
       #print obj.__class__, 'commited'

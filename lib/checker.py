@@ -1,3 +1,4 @@
+import sys
 def raise_checker_error(exc_type, exc_value = None, traceback=None):
   # If traceback is given, raise_checker_error is not in traceback
   do_raise_checker_error(exc_type, exc_value, traceback)
@@ -55,7 +56,14 @@ def get_revision_manager():
   import revision
   return revision.get_revisions()
 def get_current_frame():
-  return get_revision_manager().traced_frame
+  from traced_frame import TracedFrame
+  return TracedFrame.current()
+def get_program_frame(start = None):
+  if start is None:
+    start = sys._getframe(0)
+  while is_internal_frame(start):
+    start = start.f_back
+  return start
 def fork():
   return get_current_frame().get_next_bool_decision()
 

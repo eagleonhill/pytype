@@ -1,7 +1,7 @@
 import os
 import sys
 from lib.transform import transform
-from lib.traced_frame import TracedFrame
+from lib.traced_frame import TracedFrame, FunctionDecision
 import lib.hook_builtins
 
 if not sys.argv[1:] or sys.argv[1] in ("--help", "-h"):
@@ -20,7 +20,8 @@ sys.path[0] = os.path.dirname(mainpyfile)
 
 exc = transform(open(mainpyfile).read(), mainpyfile)
 mod = compile(exc, mainpyfile, 'exec')
-frame = TracedFrame(None)
+result = FunctionDecision()
+frame = TracedFrame(result)
 
 while frame.next_path():
   g = lib.hook_builtins.get_globals('__main__')

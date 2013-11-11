@@ -1,24 +1,34 @@
 import checker
 from revision import get_revisions
+from threading import local
 
-class TracedFrame:
+class TracedFrame(object):
   """
   A function call frame which records all possible return values and errors
   that may be raised, and maintain all undetermined decisions during
   evaluations."""
-  def __init__(self, back):
+  _frame_local = local()
+  _frame_local.current = None
+  @staticmethod
+  def current():
+    return TracedFrame._frame_local.current
+  @staticmethod
+  def set_current(value):
+    TracedFrame._frame_local.current = value
+  def __init__(self, result = None):
     self.throws = []
-    self.back = back
-    self.decision_list = []
+    self.decision_list = None
     self.decision_made = 0
-    self.total_decision = 0
-    self.result = None
+    self.result = result
+    self.back = self.current()
+    if result and self.back:
+      self.back.add_decision(result)
   def __enter__(self):
+    assert self.current() == self.back
     self.running = True
-    self.back = get_revisions().traced_frame
-    get_revisions().traced_frame = self
+    self.set_current(self)
   def __exit__(self, exc_type, exc_value, traceback):
-    get_revisions().traced_frame = self.back
+    self.set_current(self.back)
     self.running = False
     if exc_type is TracedFrame.DuplicatedPathError:
       return True
@@ -27,12 +37,16 @@ class TracedFrame:
     elif exc_type:
       if checker.is_internal_error(exc_type, exc_value, traceback):
         return False
-      self.result.add_exception(exc_type, exc_value, traceback)
-      return True
+      if self.result:
+        self.result.on_exception(exc_type, exc_value, traceback)
+        return True
+      else:
+        return False
+    elif self.result:
+      self.result.on_finish()
   def next_path(self):
     self.decision_made = 0
-    if self.result is None:
-      self.result = FunctionDecision()
+    if self.decision_list is None:
       self.decision_list = []
       return True
     while len(self.decision_list) and\
@@ -103,7 +117,10 @@ class FunctionDecision(DecisionSet):
     if self.sideeffect:
       self.start_revision = get_revisions().commit()
     self.index = 0
-  def add_exception(self, exc_type, exc_value, traceback):
+  def on_finish(self):
+    """ revision will be added when adding return value"""
+    pass
+  def on_exception(self, exc_type, exc_value, traceback):
     revision = self.get_rev()
     self.exceptions.append((exc_type, exc_value, traceback, revision))
   def add_return_value(self, value):
@@ -171,17 +188,16 @@ class FunctionDecision(DecisionSet):
 
 def TracedFunction(func):
   def traced_func_call(*args, **kargs):
-    cur_frame = get_revisions().traced_frame
+    cur_frame = TracedFrame.current()
     assert cur_frame, 'Root frame is not set'
     if cur_frame.has_more_decisions():
       return cur_frame.get_next_call_decision()
-    frame = TracedFrame(cur_frame)
+    frame = TracedFrame(FunctionDecision())
     rev = get_revisions().commit()
     while frame.next_path():
       with frame:
         get_revisions().set_rev(rev)
         frame.result.add_return_value(func(*args, **kargs))
 
-    cur_frame.add_decision(frame.result)
     return cur_frame.get_next_call_decision()
   return traced_func_call
