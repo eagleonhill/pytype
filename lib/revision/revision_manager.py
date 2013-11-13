@@ -1,8 +1,11 @@
 from threading import local
+import sys
 from weakref import WeakValueDictionary
 from revision import Revision
 from ..snapshot import Immutable, Snapshotable
+from ..checker import get_program_frame
 
+local_dict = local()
 class RevisionManager(object):
   class ReplayLock(object):
     __slots__ = 'count'
@@ -42,6 +45,12 @@ class RevisionManager(object):
     self.commiting = False
     #print 'Commit to', new_rev
     return new_rev
+  def commit_local(self):
+    rev = self.commit()
+    f = get_program_frame()
+    rev.local = dict(f.f_locals)
+    rev.code = f.f_code
+    return rev
 
   def pop(self):
     self.cur_rev.rollback()
@@ -63,14 +72,21 @@ class RevisionManager(object):
     assert cp, 'Cannot find LCP'
     return cp.pop()
 
-  def set_rev(self, rev):
-    if self.cur_rev == rev:
-      return
-    #print 'Setting rev to', rev
-    lcp = self.lcp(rev, self.cur_rev)
-    while self.cur_rev != lcp:
-      self.pop()
-    self.push_to_rev(rev)
+  def set_rev(self, rev, setlocal = False):
+    if self.cur_rev != rev:
+      #print 'Setting rev to', rev
+      lcp = self.lcp(rev, self.cur_rev)
+      while self.cur_rev != lcp:
+        self.pop()
+      self.push_to_rev(rev)
+    if setlocal:
+      f = get_program_frame()
+      assert rev.local is not None
+      assert f.f_code is rev.code
+      local_dict.dict = rev.local
+
+  def set_local(self, rev):
+    self.set_rev(rev, True)
 
   def push_to_rev(self, rev):
     if rev is None:
@@ -104,3 +120,13 @@ def get_revisions():
     _rev.rm = RevisionManager()
   return _rev.rm
 
+def loadlocals():
+  f = get_program_frame()
+  backup = {}
+  for name in f.f_locals:
+    if name.startswith('__pytype'):
+      backup[name] = f.f_locals[name]
+  f.f_locals.clear()
+  f.f_locals.update(backup)
+  f.f_locals.update(local_dict.dict)
+  del local_dict.dict

@@ -21,8 +21,6 @@ class TracedFrame(object):
     self.decision_made = 0
     self.result = result
     self.back = self.current()
-    if result and self.back:
-      self.back.add_decision(result)
   def __enter__(self):
     assert self.current() == self.back
     self.running = True
@@ -56,8 +54,11 @@ class TracedFrame(object):
       self.decision_list[-1].goto_next()
       return True
     else:
+      self.finish()
       return False
-
+  def finish(self):
+    if self.back and self.result:
+      self.back.add_decision(self.result)
   def get_next_decision(self, typecheck = None):
     assert self.has_more_decisions()
     d = self.pop_decision()

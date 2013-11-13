@@ -1,7 +1,9 @@
 import os
 import sys
+import tempfile
 from lib.transform import transform
 from lib.traced_frame import TracedFrame, FunctionDecision
+from codegen import to_source
 import lib.hook_builtins
 
 if not sys.argv[1:] or sys.argv[1] in ("--help", "-h"):
@@ -19,6 +21,13 @@ del sys.argv[0]         # Hide "pytype.py" from argument list
 sys.path[0] = os.path.dirname(mainpyfile)
 
 exc = transform(open(mainpyfile).read(), mainpyfile)
+"""
+exc = to_source(exc, '  ')
+tmpf, path = tempfile.mkstemp(suffix='.py', text=True)
+os.fdopen(tmpf, 'w').write(exc)
+mainpyfile = path
+print exc
+"""
 mod = compile(exc, mainpyfile, 'exec')
 result = FunctionDecision()
 frame = TracedFrame(result)
@@ -28,3 +37,4 @@ while frame.next_path():
   with frame:
     exec mod in g
 frame.result.dump_exceptions(hide_internal=True)
+#os.remove(path)

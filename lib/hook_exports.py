@@ -1,5 +1,7 @@
 import builtin_types as t
 from traced_frame import TracedFunction
+from revision.block import do_block, frame
+from revision.revision_manager import loadlocals
 
 def num_const(value):
   if type(value) == float:
