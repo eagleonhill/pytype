@@ -5,7 +5,6 @@ from revision import Revision
 from ..snapshot import Immutable, Snapshotable
 from ..checker import get_program_frame
 
-local_dict = local()
 class RevisionManager(object):
   class ReplayLock(object):
     __slots__ = 'count'
@@ -83,7 +82,7 @@ class RevisionManager(object):
       f = get_program_frame()
       assert rev.local is not None
       assert f.f_code is rev.code
-      local_dict.dict = rev.local
+      LocalLoader(f, rev).setup()
 
   def set_local(self, rev):
     self.set_rev(rev, True)
@@ -120,13 +119,40 @@ def get_revisions():
     _rev.rm = RevisionManager()
   return _rev.rm
 
-def loadlocals():
-  f = get_program_frame()
-  backup = {}
-  for name in f.f_locals:
-    if name.startswith('__pytype'):
-      backup[name] = f.f_locals[name]
-  f.f_locals.clear()
-  f.f_locals.update(backup)
-  f.f_locals.update(local_dict.dict)
-  del local_dict.dict
+class LocalLoader(object):
+  @staticmethod
+  def defaultTrace(f, event, arg):
+    return None
+  def __init__(self, frame, rev):
+    self.rev = rev
+    self.local = rev.local
+    self.frame = frame
+  def setup(self):
+    self.old_ftrace = self.frame.f_trace
+    self.set = False
+    self.frame.f_trace = self
+  def __call__(self, f, event, arg):
+    if event == 'call':
+      assert False
+      return self.old_trace(f, event, arg) if self.old_trace else None
+    assert f == self.frame
+    if self.set:
+      return
+    backup = {}
+    d = f.f_locals
+    for name in d:
+      if name.startswith('__pytype'):
+        backup[name] = d[name]
+    before = [x for x in d.keys() if not x.startswith('_')]
+    d.clear()
+    d.update(backup)
+    d.update(self.local)
+    end = [x for x in d.keys() if not x.startswith('_')]
+    #print self.rev, before, end
+    self.set = True
+    if self.old_ftrace:
+      ret = self.old_ftrace(f, event, arg)
+    else:
+      ret = self.old_ftrace
+    return ret
+sys.settrace(LocalLoader.defaultTrace)

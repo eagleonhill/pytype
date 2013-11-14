@@ -107,7 +107,6 @@ class BlockVisitor(NodeTransformer):
       body=[With(
         context_expr=decorate('frame', bid()),
         body=[
-          NextLineNode(value=self.reloadlocal()),
           TryExcept(
             body=[Assign(
                 targets=[node.target],
@@ -124,8 +123,8 @@ class BlockVisitor(NodeTransformer):
         ] + node.body
       )],
       orelse=[]
-    ), node),
-    NextLineNode(value=self.reloadlocal())]
+    ), node)
+    ]
 
   def visit_Break(self, node):
     return self.loop_break(node)
@@ -146,16 +145,12 @@ class BlockVisitor(NodeTransformer):
         body=[With(
           context_expr=decorate('frame', blockid()),
           body=[
-            NextLineNode(value=self.reloadlocal()),
             node,
           ]
         )],
         orelse=[]
-      ), node),
-      NextLineNode(value=self.reloadlocal()),
+      ), node)
     ]
-  def reloadlocal(self):
-    return Exec(body=Str('__hook_exports__.loadlocals()'))
 
 class NextLineNoVisitor(NodeTransformer):
   def generic_visit(self, node):

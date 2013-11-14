@@ -23,6 +23,7 @@ module = Module(
     Value('object', BaseObject),
     Value('__import__', __builtin__.__import__),
     Value('StopIteration', StopIteration),
+    Value('AssertionError', AssertionError),
   ]
 )
 def export_module(g):

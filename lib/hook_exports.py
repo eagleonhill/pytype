@@ -2,7 +2,6 @@ import builtin_types as t
 from traced_frame import TracedFunction, return_value
 from revision.block import do_block, frame
 from revision.loop_block import do_while, loop_break, do_for, for_next
-from revision.revision_manager import loadlocals
 
 def num_const(value):
   if type(value) == float:

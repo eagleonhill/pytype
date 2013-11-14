@@ -9,7 +9,9 @@ class BlockDecision(DecisionSet):
   def on_finish(self):
     self.finish()
   def finish(self):
-    self.result.append((None, None, None, self.get_rev()))
+    rev = self.get_rev()
+    #print 'finish block', rev
+    self.result.append((None, None, None, rev))
   def on_exception(self, exc_type, exc_value, traceback):
     revision = self.get_rev()
     self.result.append((exc_type, exc_value, traceback, revision))
@@ -23,6 +25,7 @@ class BlockDecision(DecisionSet):
   def current(self):
     exc_type, exc_value, traceback, revision = self.result[self.index]
     get_revision_manager().discard()
+    #print 'set local', revision
     get_revision_manager().set_local(revision)
     if exc_type:
       raise exc_type, exc_value, traceback
@@ -30,6 +33,7 @@ class BlockDecision(DecisionSet):
 def block_done(bid):
   cur = TracedFrame.current()
   if cur.has_more_decisions():
+    #print 'block_done'
     cur.get_next_decision(BlockDecision)
     return True
 
@@ -55,9 +59,11 @@ def do_block(bid):
   def init():
     t = TracedFrame(BlockDecision())
     t.start_rev = get_revision_manager().commit_local()
+    #print 'commiting', t.start_rev
     return t
   f = get_frame(bid, init)
   if f.next_path():
+    #print 'next_path', f.start_rev
     get_revision_manager().set_local(f.start_rev)
     return True
   else:
