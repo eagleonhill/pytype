@@ -22,6 +22,7 @@ module = Module(
     Value('False', False),
     Value('object', BaseObject),
     Value('__import__', __builtin__.__import__),
+    Value('StopIteration', StopIteration),
   ]
 )
 def export_module(g):

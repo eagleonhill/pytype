@@ -7,10 +7,13 @@ class BlockDecision(DecisionSet):
     self.result = []
     self.index = 0
   def on_finish(self):
+    self.finish()
+  def finish(self):
     self.result.append((None, None, None, self.get_rev()))
   def on_exception(self, exc_type, exc_value, traceback):
     revision = self.get_rev()
     self.result.append((exc_type, exc_value, traceback, revision))
+    return True
   def get_rev(self):
     return get_revision_manager().commit_local()
   def has_next(self):
@@ -40,6 +43,7 @@ def get_frame(bid, default = None):
     frame = default()
     pf.f_locals[identifier] = frame
   return frame
+
 def clear_frame(bid):
   pf = get_program_frame()
   identifier = blockprefix + str(bid)

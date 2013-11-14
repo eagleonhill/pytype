@@ -1,5 +1,6 @@
 import checker
 from revision import get_revisions
+from checker import raise_checker_error
 from threading import local
 
 class TracedFrame(object):
@@ -16,7 +17,6 @@ class TracedFrame(object):
   def set_current(value):
     TracedFrame._frame_local.current = value
   def __init__(self, result = None):
-    self.throws = []
     self.decision_list = None
     self.decision_made = 0
     self.result = result
@@ -28,6 +28,8 @@ class TracedFrame(object):
   def __exit__(self, exc_type, exc_value, traceback):
     self.set_current(self.back)
     self.running = False
+    return self.onexit(exc_type, exc_value, traceback)
+  def onexit(self, exc_type, exc_value, traceback):
     if exc_type is TracedFrame.DuplicatedPathError:
       return True
     elif exc_type is TracedFrame.ImpossiblePathError:
@@ -36,8 +38,7 @@ class TracedFrame(object):
       if checker.is_internal_error(exc_type, exc_value, traceback):
         return False
       if self.result:
-        self.result.on_exception(exc_type, exc_value, traceback)
-        return True
+        return self.result.on_exception(exc_type, exc_value, traceback)
       else:
         return False
     elif self.result:
@@ -54,8 +55,13 @@ class TracedFrame(object):
       self.decision_list[-1].goto_next()
       return True
     else:
-      self.finish()
+      self.on_finish()
       return False
+  def reset(self):
+    self.decision_list = None
+    self.decision_made = 0
+  def on_finish(self):
+    self.finish()
   def finish(self):
     if self.back and self.result:
       self.back.add_decision(self.result)
@@ -89,7 +95,14 @@ class TracedFrame(object):
   class DuplicatedPathError(Exception):
     pass
 
-class DecisionSet:
+class ReturnValue(Exception):
+  def __init__(self, value):
+    self.value = value
+
+def return_value(value):
+  raise_checker_error(ReturnValue, value)
+
+class DecisionSet(object):
   """ Abstract class of an undetermined decision"""
   def __init__(self):
     raise NotImplementedError('Abstract class')
@@ -122,8 +135,12 @@ class FunctionDecision(DecisionSet):
     """ revision will be added when adding return value"""
     pass
   def on_exception(self, exc_type, exc_value, traceback):
+    if exc_type is ReturnValue:
+      self.add_return_value(exc_value.value)
+      return True
     revision = self.get_rev()
     self.exceptions.append((exc_type, exc_value, traceback, revision))
+    return True
   def add_return_value(self, value):
     revision = self.get_rev()
     self.return_values.append((value, revision))
