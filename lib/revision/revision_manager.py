@@ -40,9 +40,9 @@ class RevisionManager(object):
         break
       new_rev.take_snapshot(obj)
       #print obj.__class__, 'commited'
+    #print 'Commit from', self.cur_rev, 'to', new_rev
     self.cur_rev = new_rev
     self.commiting = False
-    #print 'Commit to', new_rev
     return new_rev
   def commit_local(self):
     rev = self.commit()

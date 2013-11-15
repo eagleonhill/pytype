@@ -41,11 +41,12 @@ class Revision:
         #print obj, 'not reverted from', self, value, self.back
         pass
   def __rollback_obj(self, obj, curvalue):
-    if id(obj) in self.objs:
-      self.replay(obj, curvalue=curvalue)
+    rev = self
+    while rev and not id(obj) in rev.objs:
+      rev = rev.back
+    if rev:
+      rev.replay(obj, curvalue=curvalue)
       return True
-    elif self.back:
-      return self.back.__rollback_obj(obj, curvalue)
     else:
       return False
   def __str__(self):

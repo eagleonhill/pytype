@@ -131,6 +131,13 @@ class FunctionDecision(DecisionSet):
     if self.sideeffect:
       self.start_revision = get_revisions().commit()
     self.index = 0
+  def clone(self):
+    other = FunctionDecision()
+    other.return_values = self.return_values
+    other.exceptions = self.exceptions
+    other.sideeffect = self.sideeffect
+    other.index = 0
+    return other
   def on_finish(self):
     """ revision will be added when adding return value"""
     pass

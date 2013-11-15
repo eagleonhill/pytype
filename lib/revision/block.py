@@ -1,7 +1,29 @@
 from ..traced_frame import DecisionSet, TracedFrame
 from ..checker import get_program_frame, get_revision_manager
 
-blockprefix = '__pytype_block'
+class FrameInfo(object):
+  identifier = '__pytype_frame_info'
+  def __init__(self, frame):
+    self.block_frames = {}
+    self.frame = frame
+  @classmethod
+  def get_frameinfo(cls, frame):
+    l = frame.f_locals
+    if cls.identifier in l:
+      return l[cls.identifier]
+    v = cls(frame)
+    l[cls.identifier] = v
+    return v
+  def get_block(self, bid, init = None):
+    if bid in self.block_frames:
+      return self.block_frames[bid]
+    assert init, 'Block not found'
+    v = init()
+    self.block_frames[bid] = v
+    return v
+  def clear_block(self, bid):
+    del self.block_frames[bid]
+
 class BlockDecision(DecisionSet):
   def __init__(self):
     self.result = []
@@ -37,22 +59,6 @@ def block_done(bid):
     cur.get_next_decision(BlockDecision)
     return True
 
-def get_frame(bid, default = None):
-  pf = get_program_frame()
-  identifier = blockprefix + str(bid)
-  if default is None:
-    return pf.f_locals[identifier]
-  frame = pf.f_locals.get(identifier, None)
-  if frame is None:
-    frame = default()
-    pf.f_locals[identifier] = frame
-  return frame
-
-def clear_frame(bid):
-  pf = get_program_frame()
-  identifier = blockprefix + str(bid)
-  del pf.f_locals[identifier]
-
 def do_block(bid):
   if block_done(bid):
     return False
@@ -61,16 +67,19 @@ def do_block(bid):
     t.start_rev = get_revision_manager().commit_local()
     #print 'commiting', t.start_rev
     return t
-  f = get_frame(bid, init)
+  pf = get_program_frame()
+  fi = FrameInfo.get_frameinfo(pf)
+  f = fi.get_block(bid, init)
   if f.next_path():
     #print 'next_path', f.start_rev
     get_revision_manager().set_local(f.start_rev)
     return True
   else:
-    clear_frame(bid)
+    fi.clear_block(bid)
     assert block_done(bid)
     return False
 
 def frame(bid):
   pf = get_program_frame()
-  return get_frame(bid)
+  fi = FrameInfo.get_frameinfo(pf)
+  return fi.get_block(bid)
