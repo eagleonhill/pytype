@@ -2,7 +2,7 @@ from unittest import *
 import sys
 
 if len(sys.argv) == 2:
-  pattern = 'test' + sys.argv[1]
+  pattern = 'test*' + sys.argv[1] + '*.py'
 else:
   pattern = 'test*.py'
 suite = TestLoader().discover('unit', pattern, '..')
