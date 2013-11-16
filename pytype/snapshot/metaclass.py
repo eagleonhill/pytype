@@ -1,6 +1,6 @@
 from types import ClassType, InstanceType
 from ..checker import notify_update, attr_error, raise_checker_error
-from base import Snapshotable, restore_as_dict
+from .base import Snapshotable, restore_as_dict
 
 class SnapshotableMetaClass(type):
   __defining_baseobject = True

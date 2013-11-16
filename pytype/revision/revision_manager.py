@@ -1,7 +1,7 @@
 from threading import local
 import sys
 from weakref import WeakValueDictionary
-from revision import Revision
+from .revision import Revision
 from ..snapshot import Immutable, Snapshotable
 from ..checker import get_program_frame
 
@@ -30,7 +30,7 @@ class RevisionManager(object):
     return self.rev_id
 
   def commit(self):
-    from revision import Revision
+    from .revision import Revision
     self.commiting = True
     new_rev = Revision(self.cur_rev, self)
     while self.changed_objs:

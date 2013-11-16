@@ -1,4 +1,4 @@
-from defs import *
+from .defs import *
 from .. import checker
 from ..type_value.builtin_builder import *
 from ..type_value.builtin_type import is_determined, get_determined_value

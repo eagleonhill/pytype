@@ -1,6 +1,6 @@
 import ast
-from constant_visitor import ConstantVisitor
-from block_visitor import BlockVisitor, NextLineNoVisitor
+from .constant_visitor import ConstantVisitor
+from .block_visitor import BlockVisitor, NextLineNoVisitor
 import sys
 
 def transform(source, filename):

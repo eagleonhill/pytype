@@ -1,4 +1,4 @@
-from defs import *
+from .defs import *
 from .. import checker
 
 def bool_create_undetermined():

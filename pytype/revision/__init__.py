@@ -1,1 +1,1 @@
-from revision_manager import get_revisions
+from .revision_manager import get_revisions

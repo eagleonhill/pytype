@@ -53,10 +53,10 @@ def type_equal(val1, val2):
     return val1.__class__ is val2.__class__
 
 def get_revision_manager():
-  import revision
+  from . import revision
   return revision.get_revisions()
 def get_current_frame():
-  from traced_frame import TracedFrame
+  from .traced_frame import TracedFrame
   return TracedFrame.current()
 def get_program_frame(start = None):
   if start is None:

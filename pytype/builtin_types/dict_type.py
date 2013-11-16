@@ -1,5 +1,5 @@
-from defs import *
-import defs
+from .defs import *
+from . import defs
 from ..checker import type_equal, type_error, reraise_error, key_error
 from ..type_value import get_determined_value, is_determined
 from ..snapshot import SDict, SList, SnapshotableMetaClass

@@ -1,10 +1,10 @@
 from types import ModuleType
-import builtin_modules.__builtins__ as builtin
-import hook_exports
-from snapshot import SnapshotableMetaClass
+from .builtin_modules import builtins
+from . import hook_exports
+from .snapshot import SnapshotableMetaClass
 
 builtin_module = ModuleType('__builtin__')
-builtin.export_module(builtin_module.__dict__)
+builtins.export_module(builtin_module.__dict__)
 g = dict()
 g['__builtins__'] = builtin_module
 g['__hook_exports__'] = hook_exports

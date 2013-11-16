@@ -1,6 +1,6 @@
-import checker
-from revision import get_revisions
-from checker import raise_checker_error
+from . import checker
+from .revision import get_revisions
+from .checker import raise_checker_error
 from threading import local
 
 class TracedFrame(object):

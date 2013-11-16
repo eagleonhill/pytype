@@ -1,4 +1,4 @@
-from base import *
+from .base import *
 from .. import checker
 from ..snapshot import SnapshotableMetaClass, Snapshotable, Immutable,\
     BaseObject
@@ -15,7 +15,7 @@ class BuiltinTypeInternal(Immutable):
     return isinstance(value, self.base)
 
   def get_attr(self, name):
-    import compare_func
+    from . import compare_func
     if name in self.attr:
       return self.attr[name]
     else:
@@ -28,7 +28,7 @@ class BuiltinTypeInternal(Immutable):
     self.add_function(op, [], returnType)
 
   def add_default_compare(self):
-    from compare_func import default_cmp
+    from .compare_func import default_cmp
     self.attr.update(default_cmp)
 
   def add_binary_operator(self, op, returnType = None, otherType = None): 
@@ -42,7 +42,7 @@ class BuiltinTypeInternal(Immutable):
     self.get_function(op).add_pattern(args, optionalArgs, returnType)
 
   def get_function(self, op):
-    from func_type import BuiltinFunc
+    from .func_type import BuiltinFunc
     if op not in self.attr:
       self.attr[op] = BuiltinFunc(op)
     return self.attr[op]
@@ -51,7 +51,7 @@ class BuiltinTypeInternal(Immutable):
     self.get_function(op).add_from_format_str(args, returnType)
 
   def add_stub_function(self, op, func):
-    from func_type import StubFunc
+    from .func_type import StubFunc
     self.attr[op] = StubFunc(func)
 
   def match(self, other):

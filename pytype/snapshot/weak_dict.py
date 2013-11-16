@@ -1,7 +1,7 @@
 from weakref import WeakKeyDictionary, WeakValueDictionary, ref
-from sdict import SDict
+from .sdict import SDict
 from ..checker import notify_update
-from base import Immutable
+from .base import Immutable
 
 class IDedRef(ref):
   def __init__(self, obj, callback):

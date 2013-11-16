@@ -1,4 +1,4 @@
-from defs import *
+from .defs import *
 from .. import checker
 from ..type_value.builtin_builder import *
 import __builtin__

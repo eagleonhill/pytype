@@ -1,10 +1,10 @@
 import os
 import sys
 import tempfile
-from transform import transform
-from traced_frame import TracedFrame, FunctionDecision
+from .transform import transform
+from .traced_frame import TracedFrame, FunctionDecision
 from codegen import to_source
-import hook_builtins
+from . import hook_builtins
 
 if not sys.argv[1:] or sys.argv[1] in ("--help", "-h"):
   print "usage: pdb.py scriptfile [arg] ..."

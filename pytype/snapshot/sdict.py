@@ -1,5 +1,5 @@
 from UserDict import UserDict
-from base import Snapshotable
+from .base import Snapshotable
 from ..checker import notify_update
 
 class SDict(UserDict, Snapshotable):

@@ -1,5 +1,5 @@
-from builtin_type import BuiltinTypeInternal
-from func_type import BuiltinFunc
+from .builtin_type import BuiltinTypeInternal
+from .func_type import BuiltinFunc
 from types import ModuleType
 
 class Module:

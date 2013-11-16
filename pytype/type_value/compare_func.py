@@ -1,8 +1,8 @@
-import checker
+from . import checker
 from ..snapshot import SIDWeakKeyDictionary, SDict,\
     SnapshotableMetaClass
-from builtin_type import get_determined_value, is_determined, BuiltinObjInstance
-from func_type import StubFunc
+from .builtin_type import get_determined_value, is_determined, BuiltinObjInstance
+from .func_type import StubFunc
 from ..builtin_types.defs import IntType, FloatType
 
 LT = 0b001

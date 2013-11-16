@@ -1,4 +1,4 @@
-from base import Snapshotable
+from .base import Snapshotable
 from types import GeneratorType
 from ..checker import notify_update, reraise_error
 

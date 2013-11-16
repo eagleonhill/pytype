@@ -1,4 +1,4 @@
-import revision
+from . import revision
 
 def make_snapshot(self):
   if hasattr(self, '__slots__'):

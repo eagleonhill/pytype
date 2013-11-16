@@ -1,7 +1,7 @@
 from ..traced_frame import DecisionSet, TracedFrame
 from ..checker import get_program_frame, get_revision_manager,\
     raise_checker_error, reraise_error
-from block import *
+from .block import *
 
 class LoopFrame(TracedFrame):
   def __init__(self, result=None):

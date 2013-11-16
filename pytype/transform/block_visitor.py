@@ -1,4 +1,4 @@
-from base import *
+from .base import *
 from ast import *
 
 class NextLineNode(AST):

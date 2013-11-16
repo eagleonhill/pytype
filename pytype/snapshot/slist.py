@@ -1,5 +1,5 @@
 from UserList import UserList
-from base import Snapshotable
+from .base import Snapshotable
 from ..checker import notify_update
 
 class SList(UserList, Snapshotable):

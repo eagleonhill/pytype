@@ -1,6 +1,6 @@
-import checker
-from base import BadType
-from builtin_type import get_determined_value, is_determined
+from . import checker
+from .base import BadType
+from .builtin_type import get_determined_value, is_determined
 
 class InvokePattern(object):
   def __init__(self, args):
@@ -70,7 +70,7 @@ class BuiltinInvokePattern(InvokePattern):
       args = []
     if optional_args is None:
       optional_args = []
-    from builtin_type import BuiltinTypeInternal
+    from .builtin_type import BuiltinTypeInternal
     self.args = args
     self.optional_args = optional_args
     self.all_args = args + optional_args

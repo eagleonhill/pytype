@@ -1,5 +1,5 @@
-from defs import *
-import defs
+from .defs import *
+from . import defs
 from ..checker import type_equal, reraise_error, get_current_frame
 from ..makefits import type_make_fit_internal, type_make_fit
 from ..type_value import get_determined_value, is_determined
