@@ -1,5 +1,5 @@
 import checker
-from ..snapshot import SWeakKeyDictionary, SDict,\
+from ..snapshot import SIDWeakKeyDictionary, SDict,\
     SnapshotableMetaClass
 from builtin_type import get_determined_value, is_determined, BuiltinObjInstance
 from func_type import StubFunc
@@ -49,7 +49,7 @@ class CompareHistory:
     self.nonequal = SDict()
 
     # Compare to undertermined value
-    self.comp = SWeakKeyDictionary()
+    self.comp = SIDWeakKeyDictionary()
 
   def update(self, value, s):
     if s == EQ:
