@@ -1,8 +1,8 @@
 import unittest
-from ..lib.snapshot.collectionvalue import *
-from ..lib.builtin_types import *
-from ..lib.type_value import *
-from ..lib.traced_frame import TracedFrame, FunctionDecision
+from ..snapshot.collectionvalue import *
+from ..builtin_types import *
+from ..type_value import *
+from ..traced_frame import TracedFrame, FunctionDecision
 
 class CollectinValueTestCase(unittest.TestCase):
   def test_add(self):

@@ -1,7 +1,7 @@
 import unittest
-from ..lib.builtin_types import *
-from ..lib.makefits import type_make_fit
-from ..lib.type_value import is_determined, get_determined_value
+from ..builtin_types import *
+from ..makefits import type_make_fit
+from ..type_value import is_determined, get_determined_value
 
 class MakeFitsTestCase(unittest.TestCase):
   def test_builtin(self):
@@ -89,7 +89,7 @@ class MakeFitsTestCase(unittest.TestCase):
     self.assertEquals(len(d._get_value_type(keyi)), 1)
 
   def test_obj(self):
-    from ..lib.snapshot import BaseObject, SnapshotableMetaClass
+    from ..snapshot import BaseObject, SnapshotableMetaClass
     class A(BaseObject):
       __metaclass__ = SnapshotableMetaClass
     class B:

@@ -1,10 +1,10 @@
 import os
 import sys
 import tempfile
-from lib.transform import transform
-from lib.traced_frame import TracedFrame, FunctionDecision
+from transform import transform
+from traced_frame import TracedFrame, FunctionDecision
 from codegen import to_source
-import lib.hook_builtins
+import hook_builtins
 
 if not sys.argv[1:] or sys.argv[1] in ("--help", "-h"):
   print "usage: pdb.py scriptfile [arg] ..."
@@ -33,7 +33,7 @@ result = FunctionDecision()
 frame = TracedFrame(result)
 
 while frame.next_path():
-  g = lib.hook_builtins.get_globals('__main__')
+  g = hook_builtins.get_globals('__main__')
   with frame:
     exec mod in g
 frame.result.dump_exceptions(hide_internal=True)

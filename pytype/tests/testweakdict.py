@@ -1,5 +1,5 @@
 import unittest
-from ..lib.snapshot.weak_dict import SIDWeakKeyDictionary
+from ..snapshot.weak_dict import SIDWeakKeyDictionary
 
 class ValueRef(object):
   def __init__(self, value):
