@@ -1,128 +1,314 @@
+from abc import abstractmethod, ABCMeta
+import sys
 from .defs import *
 from . import defs
-from ..checker import type_equal, reraise_error, get_current_frame
+from ..checker import reraise_error, get_current_frame, notify_update
 from ..makefits import type_make_fit_internal, type_make_fit
 from ..type_value import get_determined_value, is_determined
-from ..snapshot import SList, SnapshotableMetaClass
-from ..traced_frame import FunctionDecision
+from ..snapshot import SList, SnapshotableMetaClass, CollectionValue,\
+    Immutable, Snapshotable
 
-class UndeterminedList:
-  __metaclass__ = SnapshotableMetaClass
-  def __init__(self, iterable = None):
-    self._items = SList()
-    self._types = SList()
-    self._length = IntType.create_from_value(0)
-    self._maybeempty = False
-    if isinstance(iterable, UndeterminedList):
-      self._items = SList(iterable._items)
-      self._types = SList(iterable._types)
-      self._length = iterable._length
+class ListState:
+  __metaclass__ = ABCMeta
+  @abstractmethod
+  def __getitem__(self, index): pass
+
+  @abstractmethod
+  def __setitem__(self, index, value): pass
+
+  @abstractmethod
+  def __delitem__(self, index): pass
+
+  @abstractmethod
+  def append(self, item): pass
+
+  @abstractmethod
+  def sort(self, *arg, **kwds): pass
+
+  @abstractmethod
+  def index(self, item): pass
+
+  @abstractmethod
+  def count(self, item): pass
+
+  @abstractmethod
+  def reverse(self): pass
+
+  @abstractmethod
+  def extend(self, other): pass
+
+  @abstractmethod
+  def __imul__(self, other): pass
+
+  @abstractmethod
+  def pop(self, index): pass
+  
+  @abstractmethod
+  def __len__(self): pass
+
+  @abstractmethod
+  def __iter__(self): pass
+
+  @abstractmethod
+  def __nonzero__(self): pass
+
+  @abstractmethod
+  def copy(self, list): pass
+
+class ListUnderterminedState(ListState):
+  def __init__(self, list, values = []):
+    self.value = CollectionValue()
+    self.list = list
+    self.maybeempty = False
+    notify_update(self)
+    for v in values:
+      self.value.addvalue(v)
+  def __getitem__(self, index):
+    self.checkindex(index)
+    if isinstance(index, slice):
+      return self.list
+    return self.value.deref()
+  def __setitem__(self, index, value):
+    self.checkindex(index)
+    if isinstance(index, slice):
+      if index == ListUnderterminedState.slice_all:
+        self.list._to_determined([])
+      self.list.extend(value)
     else:
-      for item in iterable:
-        self.append(item)
+      self.value.addvalue(value)
+  @staticmethod
+  def checkindex(index):
+    # TODO
+    pass
+  def onremove(self):
+    self.maybeempty = True
+    notify_update(self)
+  def __delitem__(self, index):
+    self.checkindex(index)
+    self.onremove()
+  def count(self, item):
+    return IntType.create_undetermined()
+  def pop(self, item):
+    self.onremove()
+    return self.value.deref()
+  def __len__(self):
+    return IntType.create_undetermined()
+  def __iter__(self):
+    return self.value.iterator()
+  def append(self, value):
+    self.value.addvalue(value)
+  def extend(self, other):
+    if not other._determined():
+      for v in other._state.value.values:
+        self.value.addvalue(v)
+      if not other._state.maybeempty and self._state.maybeempty:
+        self.maybeempty = False
+        notify_update(self)
+    else:
+      for v in other._state:
+        self.append(v)
+  def __nonzero__(self):
+    if not self.maybeempty:
+      return True
+    if checker.fork():
+      self.maybeempty = False
+      notify_update(self)
+      return True
+    else:
+      self.list._to_determined([])
+      return False
+  def copy(self, list):
+    new = ListUnderterminedState(list)
+    new.value = self.value.clone()
+    new.maybeempty = self.maybeempty
+    return new
+  def __repr__(self):
+    return '{%slist: %s}' %\
+        ('nonempty' if not self.maybeempty else '', repr(self.value))
+  def __imul__(self, other):
+    if not isinstance(other, IntType):
+      raise_checker_error(TypeError, 
+          "can't multiply sequence by non-int of type %s" % type(other))
+    return self
+  def reverse(self): pass
+  def sort(self, cmp=None, key=None, reserve=None): pass
+  def index(self, item, i, j):
+    return IntType.create_undetermined()
+  def __makefits__(self, other):
+    self.extend(other.list)
+    if isinstance(other, ListUnderterminedState):
+      if other.maybeempty and not self.maybeempty:
+        self.maybeempty = True
+        notify_update(self)
 
-  def __typeeq__(self, other):
-    return len(other._types) == len(self._types) and\
-        all(lambda x: other._has_type(x), self._types)
+class ListDerterminedState(ListState):
+  def __init__(self, list, values):
+    self.data = SList(values)
+    self.list = list
+  def __getitem__(self, index):
+    # TODO: convert using __index__
+    if is_determined(index):
+      return self.data[get_determined_value(index)]
+    if isinstance(index, slice):
+      # Undetermined index
+      other = List(self.list)
+      other._to_undetermined()
+      return other[index]
+    elif isinstance(index, IntType):
+      # undetermined index
+      from ..traced_frame import TracedFrame, FunctionDecision
+      cur_frame = TracedFrame.current()
+      if not cur_frame.has_more_decisions():
+        cur_frame.add_decision(FunctionDecision.from_values(self))
+      return cur_frame.get_next_call_decision()
+    else:
+      raise_checker_error(TypeError, 
+          'list indices must be integers, not %s' % type(index))
+  def __setitem__(self, index, value):
+    if is_determined(index):
+      self.data[get_determined_value(index)] = value
+    self.list._to_undetermined()
+    self.list[index] = value
+
+  def copy(self, list):
+    return ListDerterminedState(list, self.data)
+  def __delitem__(self, index):
+    if is_determined(index):
+      del self.data[get_determined_value(index)]
+    self.list._to_undetermined()
+    del self.list[index]
+  def __iter__(self):
+    return self.data.__iter__()
+  def __imul__(self, other):
+    if not is_determined(other):
+      self.list._to_undetermined()
+      self.list *= other
+      return self.list
+    self.data *= get_determined_value(other)
+  def append(self, item):
+    self.data.append(item)
+  def insert(self, index, item):
+    if not is_determined(index):
+      self.list._to_undetermined()
+      self.list.insert(index, item)
+      return
+    self.data.insert(get_determined_value(index), item)
+  def index(self, item):
+    # TODO
+    raise NotImplementedError
+  def pop(self, i):
+    if not is_determined(i):
+      self.list._to_undetermined()
+      return self.list.pop(i)
+    return self.data.pop(get_determined_value(i))
+  def reverse(self):
+    return self.data.reverse()
+  def sort(self, *args, **kwds):
+    if not all (is_determined(x) for x in self.data):
+      self.list._to_undetermined()
+    else:
+      self.data.sort(*args, **kwds)
+  def extend(self, other):
+    if other._determined():
+      self.data += other._state.data
+    else:
+      self.list._to_undetermined()
+      self.list += other
+  def __repr__(self):
+    return repr(self.data)
+  def __len__(self):
+    return self.create_from_value(len(self.data))
+  def count(self, item):
+    # TODO: no-sideeffect compare
+    return self.data.count(item)
+  def __nonzero__(self):
+    return bool(self.data)
+  def __makefits__(self, other):
+    fitted = False
+    if isinstance(other, ListDerterminedState):
+      fitted = type_make_fit(self.data, other.data)
+    if not fitted:
+      self.list._to_undetermined()
+      self.list._state.__makefits__(other)
+
+Immutable.register(ListDerterminedState)
+
+class List(object):
+  __slots__ = ['_state', '__weakref__']
+  def __init__(self, iterable = None):
+    if isinstance(iterable, List):
+      self._state = iterable._state.copy(self)
+    elif iterable is None:
+      self._state = ListDerterminedState(self, [])
+    else:
+      # TODO: process undetermined iterable
+      self._state = ListDerterminedState(self, iterable)
+    notify_update(self)
 
   def __getitem__(self, index):
-    if is_determined(self._length) and is_determined(index):
-      try:
-        return self._items[index]
-      except:
-        reraise_error()
-    if type(index) == slice:
-      ret = UndeterminedList(self)
-      ret._length = IntType.create_undetermined()
-      return ret
-    
-    cur_frame = get_current_frame()
-    if not cur_frame.has_more_decisions():
-      d = FunctionDecision(sideeffect=False)
-      for t in self._types:
-        d.add_return_value(t)
-      cur_frame.add_decision(d)
-    return cur_frame.get_next_decision(FunctionDecision)
+    return self._state[index]
 
+  def __setitem__(self, key, value):
+    self._state[key] = value
+  def __delitem__(self, index):
+    del self._state[index]
   def __iter__(self):
-    if is_determined(self._length):
-      return self._items.__iter__()
-    else:
-      return self._types.__iter__()
-
-  def _has_type(self, element):
-    return any(map(lambda x: type_equal(x, element), self._types))
-  
+    return self._state.__iter__()
   def __add__(self, other):
-    new = UndeterminedList(self)
+    new = List(self)
     new += other
     return new
-
   def __iadd__(self, other):
-    if not isinstance(other, UndeterminedList):
-      checker.type_error(other, UndeterminedList)
-    self._items = self._items + other._items
-    for t in other._types:
-      if not self._has_type(t):
-        self._types.append(t)
-    self._length = self._length + other._length
+    self._state.extend(other)
     return self
+  def extend(self, other):
+    self._state.extend(other)
+  def __mul__(self, other):
+    new = List(self)
+    new *= other
+    return new
+  def _to_undetermined(self):
+    if not self._determined():
+      return
+    self._state = ListUnderterminedState(self, self._state)
+    notify_update(self)
+  def _to_determined(self, values):
+    if self._determined():
+      return
+    self._state = SList(values)
+    notify_update(self)
+  def _determined(self):
+    return isinstance(self._state, ListDerterminedState)
 
   def append(self, element):
-    if is_determined(self._length):
-      self._items.append(element)
-    self._add_type(element)
-    self._length += IntType.create_from_value(1)
-
-  def _add_type(self, element):
-    if not self._has_type(element):
-      self._types.append(element)
-  
+    self._state.append(element)
   def __len__(self):
-    return self._length
-
-  def _pytypecheck_is_determined(self):
-    return is_determined(self._length)\
-        and all(map(is_determined, self._items))
-
-  def _pytypecheck_get_value(self):
-    return self._items.data
-
+    return builitin_len(self._state)
   def __repr__(self):
-    return 'List(items=' + str(self._items) + ', types=' + str(self._types) +\
-        ', len=' + str(self._length)
-
+    return repr(self._state)
   def __nonzero__(self):
-    if is_determined(self._length):
-      return get_determined_value(self._items) > 0
-    elif len(self._types) > 0 and not self._maybeempty:
-      return True
-    elif len(self._types) == 0:
-      return False
-    else:
-      if checker.fork():
-        # Make it empty
-        self.__init__()
-        return False
-      else:
-        # Make it non empty
-        self._maybeempty = False
-        return True
-
+    return bool(self._state)
+  def __make__(self):
+    return self._state
+  def __restore__(self, value, oldvalue=None):
+    self._state = value
+  def pop(self, index = IntType.create_from_value(-1)):
+    return self._state.pop(index)
+  def index(self, item, i = IntType.create_from_value(0),\
+      j = IntType.create_from_value(sys.maxint)):
+    return self._state.index(item, i, j)
   def __makefits__(self, other):
-    assert isinstance(other, UndeterminedList)
-    type_make_fit_internal(self._length, other._length)
-    if is_determined(self._length):
-      if type_make_fit(self._items, other._items):
-        # _type should fit both, no need to combine
-        return
-      else:
-        # Though have the same length, cannot combine values
-        # Fall back to accept both values
-        self._length = IntType.create_undetermined()
-    # List size is undetermined, adding won't make any change
-    self += other
+    assert isinstance(other, List)
+    type_make_fit_internal(self._state, other._state)
+  def remove(self, item):
+    i = self.index(item)
+    del self[i]
+  def revsere(self):
+    self._state.reverse()
+  def sort(self, *args, **kwds):
+    self._state.sort(*args, **kwds)
 
-UndeterminedList.__name__ = 'list'
+List.__name__ = 'list'
+Snapshotable.register(List)
 
-defs.ListType = UndeterminedList
+defs.ListType = List

@@ -24,15 +24,13 @@ class MakeFitsTestCase(unittest.TestCase):
     # Merge same element type
     a = ListType([StringType.create_from_value('a')])
     self.assertTrue(type_make_fit(a, x))
-    self.assertEquals(get_determined_value(a._length), 1)
+    self.assertTrue(a._determined())
     self.assertFalse(is_determined(a[0]))
 
     # Merge different element type
     b = ListType([IntType.create_undetermined()])
     self.assertTrue(type_make_fit(b, x))
-    self.assertFalse(is_determined(b._length))
-    self.assertTrue(b._has_type(IntType.create_undetermined()))
-    self.assertTrue(b._has_type(StringType.create_undetermined()))
+    self.assertFalse(b._determined())
 
     # Merge different length
     c = ListType([
@@ -40,13 +38,7 @@ class MakeFitsTestCase(unittest.TestCase):
       IntType.create_from_value(1),
     ])
     self.assertTrue(type_make_fit(c, x))
-    self.assertFalse(is_determined(c._length))
-
-    d = ListType([IntType.create_from_value(3)])
-    self.assertTrue(type_make_fit(d, x))
-    self.assertFalse(is_determined(d._length))
-    self.assertTrue(d._has_type(IntType.create_undetermined()))
-    self.assertTrue(d._has_type(StringType.create_undetermined()))
+    self.assertFalse(c._determined())
 
   def test_dict(self):
     keya = StringType.create_from_value('a')

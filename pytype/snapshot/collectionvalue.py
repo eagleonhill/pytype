@@ -61,8 +61,13 @@ class CollectionValue(object):
       return cur_frame.get_next_decision(CollectionDerefDecision)
     cur_frame.add_decision(CollectionDerefDecision(self))
     return cur_frame.get_next_decision(CollectionDerefDecision)
-  def gen(self, nonempty):
+  def iterator(self, nonempty):
     return CollectionGen(self.values, not nonempty)
+  def clone(self):
+    new = CollectionValue()
+    new.values = SList(self.values)
+  def __repr__(self):
+    return '{ValueSet: %s}' % ', '.join(repr(x) for x in self.values)
 
 Immutable.register(CollectionValue)
 __all__ = ['CollectionValue', 'CollectionGen', 'CollectionDerefDecision']

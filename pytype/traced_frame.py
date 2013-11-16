@@ -1,6 +1,5 @@
 from . import checker
-from .revision import get_revisions
-from .checker import raise_checker_error
+from .checker import raise_checker_error, get_revision_manager
 from threading import local
 
 class TracedFrame(object):
@@ -129,8 +128,14 @@ class FunctionDecision(DecisionSet):
     self.exceptions = []
     self.sideeffect = sideeffect
     if self.sideeffect:
-      self.start_revision = get_revisions().commit()
+      self.start_revision = get_revision_manager().commit()
     self.index = 0
+  @classmethod
+  def from_values(cls, values):
+    self = cls(sideeffect = False)
+    for v in values:
+      self.add_return_value(v)
+    return self
   def clone(self):
     other = FunctionDecision()
     other.return_values = self.return_values
@@ -203,13 +208,13 @@ class FunctionDecision(DecisionSet):
 
   def get_rev(self):
     if self.sideeffect:
-      return get_revisions().commit()
+      return get_revision_manager().commit()
     else:
       return None
   def set_rev(self, revision):
     if self.sideeffect:
-      get_revisions().discard()
-      get_revisions().set_rev(revision)
+      get_revision_manager().discard()
+      get_revision_manager().set_rev(revision)
 
 def TracedFunction(func):
   def traced_func_call(*args, **kargs):
@@ -218,10 +223,10 @@ def TracedFunction(func):
     if cur_frame.has_more_decisions():
       return cur_frame.get_next_call_decision()
     frame = TracedFrame(FunctionDecision())
-    rev = get_revisions().commit()
+    rev = get_revision_manager().commit()
     while frame.next_path():
       with frame:
-        get_revisions().set_rev(rev)
+        get_revision_manager().set_rev(rev)
         frame.result.add_return_value(func(*args, **kargs))
 
     return cur_frame.get_next_call_decision()

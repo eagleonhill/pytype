@@ -119,7 +119,12 @@ class BuiltinObjInstance(BaseObject):
     return v
 
 def is_determined(obj):
-  if not hasattr(obj, '_pytypecheck_is_determined'):
+  if isinstance(obj, slice):
+    return is_determined(obj.start) and is_determined(obj.stop) \
+        and is_determined(obj.step)
+  elif isinstance(obj, tuple):
+    return all(is_determined(x) for x in obj)
+  elif not hasattr(obj, '_pytypecheck_is_determined'):
     return True
   return obj._pytypecheck_is_determined()
 
@@ -127,5 +132,9 @@ def get_determined_value(obj):
   assert is_determined(obj), repr(obj) + ' is not determined'
   if hasattr(obj, '_pytypecheck_get_value'):
     return obj._pytypecheck_get_value()
+  elif isinstance(obj, slice):
+    return slice(obj.start, obj.stop, obj.step)
+  elif isinstance(obj, tuple):
+    return tuple(get_determined_value(x) for x in obj)
   else:
     return obj
