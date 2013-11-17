@@ -29,5 +29,5 @@ class ConstantVisitor(NodeTransformer):
   def visit_Dict(self, node):
     self.generic_visit(node)
     keys = copy_location(Tuple(elts=node.keys, ctx=Load()), node)
-    values = copy_location(Tuple(elts=node.keys, ctx=Load()), node)
+    values = copy_location(Tuple(elts=node.values, ctx=Load()), node)
     return decorate('dict_const', keys, values)

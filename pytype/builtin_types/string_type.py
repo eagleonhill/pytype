@@ -1,7 +1,7 @@
 from .defs import *
 from .. import checker
 from ..type_value.builtin_builder import *
-import __builtin__
+from ..type_value import is_determined, get_determined_value
 
 strType = Type('str', (str, ), [
   Func('__add__', ['s'], 's'),
@@ -48,6 +48,14 @@ strType = Type('str', (str, ), [
 ])
 
 strType.rebuild(StringTypeInternal)
+
+def str_mod(s, var):
+  if is_determined(s) and is_determined(var):
+    return StringType.create_from_value(
+        get_determined_value(s) % get_determined_value(var))
+  return StringType.create_undetermined()
+
+StringTypeInternal.add_stub_function('__mod__', str_mod)
 
 def str_coerce(left, right):
   if isinstance(right, StringType):

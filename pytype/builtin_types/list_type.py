@@ -94,7 +94,7 @@ class ListUnderterminedState(ListState):
   def __len__(self):
     return IntType.create_undetermined()
   def __iter__(self):
-    return self.value.iterator()
+    return self.value.iterator(not self.maybeempty)
   def append(self, value):
     self.value.addvalue(value)
   def extend(self, other):
