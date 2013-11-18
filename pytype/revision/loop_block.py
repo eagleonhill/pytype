@@ -1,7 +1,16 @@
+import random
 from ..traced_frame import DecisionSet, TracedFrame
 from ..checker import get_program_frame, get_revision_manager,\
     raise_checker_error, reraise_error
 from .block import *
+from ..makefits import FittingContext
+
+LOOP_MERGE = [
+    (0, 0, 0),
+    (3, 8, FittingContext.FITS_BUILTIN_VALUE),
+    (5, 13, FittingContext.FITS_BUILTIN_VALUE | FittingContext.FITS_LIST),
+    (7, 23, FittingContext.FITS_ALL),
+]
 
 class LoopFrame(TracedFrame):
   def __init__(self, result=None):
@@ -9,13 +18,30 @@ class LoopFrame(TracedFrame):
     self.starts = []
     self.starts_new = []
     self.cur_start = None
+    self.merge_level = 0
   def add_start_state(self, state):
-    self.starts.append(state)
-    self.starts_new.append(state)
     if self.cur_start is None:
       state.loop = 0
     else:
       state.loop = self.cur_start.loop + 1
+    self.update_merge_level(state.loop, len(self.starts))
+    for s in self.starts:
+      c = FittingContext(LOOP_MERGE[self.merge_level][2])
+      newrev = c.try_fit_local_rev(state.rev, s.rev)
+      if newrev:
+        s.rev = newrev
+        break
+    else:
+      self.starts.append(state)
+      self.starts_new.append(state)
+
+  def update_merge_level(self, loop, states):
+    while self.merge_level + 1 < len(LOOP_MERGE):
+      if loop >= LOOP_MERGE[self.merge_level + 1][0] or\
+          states >= LOOP_MERGE[self.merge_level + 1][1]:
+        self.merge_level += 1
+      else:
+        break
 
   def next_path(self):
     while self.cur_start is None or not super(LoopFrame, self).next_path():
@@ -84,6 +110,11 @@ def do_for(bid, itergen):
     if not isinstance(it, Snapshotable):
       it = SGen(it)
     t.result.iterator = it
+    key = '__pytype__%dit%derator' %(bid, random.randint(1, 100000))
+    t.result.key = key
+    # Make a reference to iterator on stack, so fitting locals with fit 
+    # the iterator.
+    pf.f_locals[key] = it
     return t
   pf = get_program_frame()
   fi = FrameInfo.get_frameinfo(pf)
@@ -96,6 +127,7 @@ def do_for(bid, itergen):
     get_revision_manager().set_local(f.cur_start.rev)
     return True
   else:
+    del pf.f_locals[f.result.key]
     fi.clear_block(bid)
     assert block_done(bid)
     return False

@@ -37,7 +37,10 @@ def builtin_range(start, stop = notgiven, step = notgiven):
       else:
         v = range(*get_determined_value((start, stop, step)))
   if v is not None:
-    return ListType(v)
+    ret = ListType()
+    for x in v:
+      ret.append(IntType.create_from_value(x))
+    return ret
   else:
     ret = ListType([IntType.create_undetermined()])
     ret._to_undetermined()

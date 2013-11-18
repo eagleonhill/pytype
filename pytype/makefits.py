@@ -1,4 +1,6 @@
+from types import ModuleType
 from .checker import get_revision_manager
+from .snapshot import Immutable
 
 class FittingFailedException(Exception):
   pass
@@ -7,6 +9,7 @@ class FittingContext(object):
   FITS_BUILTIN_VALUE = 0x01
   FITS_LIST = 0x02
   FITS_DICT = 0x04
+  FITS_ALL = 0x07
 
   def __init__(self, flags):
     self.flags = flags
@@ -29,11 +32,19 @@ class FittingContext(object):
   def fit(self, target, source):
     if target is source and not self.rev_matching:
       return
+    if target is None:
+      return
+    if target is source and isinstance(target, (str, int, long, unicode)):
+      return
     matching = self.matching_pairs.setdefault(id(target), set())
     if id(source) in matching:
       return
     matching.add(id(source))
-    if type(target) is bool:
+    if type(target) is type:
+      pass
+    elif type(target) is ModuleType:
+      pass
+    elif type(target) is bool:
       if type(source) is not type(target) or target != source:
         self.fail()
     elif type(target) is tuple:
@@ -52,7 +63,8 @@ class FittingContext(object):
     elif hasattr(target, '__makefits__'):
       target.__makefits__(source, self)
     else:
-      raise NotImplementedError, 'Fitting function required'
+      raise NotImplementedError, \
+          'Fitting function required %s, %s' % (type(target), target)
 
   def try_fit(self, target, source):
     try:
@@ -73,19 +85,19 @@ class FittingContext(object):
     # TODO
     raise NotImplementedError
 
-  def try_fit_local_rev(self, local, otherrev):
-    if local.keys() != otherrev.local.keys():
+  def try_fit_local_rev(self, rev, otherrev):
+    if rev.local.keys() != otherrev.local.keys():
       return False
     try:
       self.target_rev = otherrev
       start_rev = get_revision_manager().commit()
-      for k in local.iterkeys():
-        self.fit(local[k], otherrev.local[k])
-      return True
+      for k in rev.local.iterkeys():
+        self.fit(rev.local[k], otherrev.local[k])
+      return get_revision_manager().commit_local()
     except FittingFailedException:
       get_revision_manager().discard()
       get_revision_manager().set_rev(start_rev)
-      return False
+      return None
 
 def fit_obj(target, source, flags):
   context = FittingContext(flags)

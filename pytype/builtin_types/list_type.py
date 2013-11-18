@@ -34,6 +34,9 @@ class ListState:
   def reverse(self): pass
 
   @abstractmethod
+  def insert(self): pass
+
+  @abstractmethod
   def extend(self, other): pass
 
   @abstractmethod
@@ -97,9 +100,12 @@ class ListUnderterminedState(ListState):
   def __len__(self):
     return IntType.create_undetermined()
   def __iter__(self):
-    return self.value.iterator(not self.maybeempty)
+    return self.value.iterator(self.maybeempty)
   def append(self, value):
     self.value.addvalue(value)
+    if self.maybeempty:
+      self.maybeempty = False
+      notify_update(self)
   def extend(self, other):
     if not other._determined():
       for v in other._state.value.values:
@@ -110,6 +116,9 @@ class ListUnderterminedState(ListState):
     else:
       for v in other._state:
         self.append(v)
+  def insert(self, index, value):
+    self.checkindex(index)
+    self.append(value)
   def __nonzero__(self):
     if not self.maybeempty:
       return True
@@ -140,7 +149,7 @@ class ListUnderterminedState(ListState):
   def __makefits__(self, other, context):
     if isinstance(other, ListUnderterminedState):
       context.fit(self.value, other.value)
-      if context.getdata(other) and not self.maybeempty:
+      if context.get_data(other) and not self.maybeempty:
         self.maybeempty = True
         notify_update(self)
     elif isinstance(other, ListDerterminedState):
@@ -303,6 +312,8 @@ class List(object):
     return self._state
   def __restore__(self, value, oldvalue=None):
     self._state = value
+  def insert(self, index, item):
+    self._state.insert(index, item)
   def pop(self, index = IntType.create_from_value(-1)):
     return self._state.pop(index)
   def index(self, item, i = IntType.create_from_value(0),\

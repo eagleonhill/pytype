@@ -8,7 +8,6 @@ class SGen(object):
     self.dataset = []
     self.index = 0
     notify_update(self)
-    print 'creating'
 
   def __iter__(self):
     return self
@@ -53,7 +52,7 @@ class SGen(object):
     if self is not other:
       context.fail()
     other_index = context.get_data(other)
-    if self.index != other.index:
+    if self.index != other_index:
       context.fail()
 
 Snapshotable.register(SGen)

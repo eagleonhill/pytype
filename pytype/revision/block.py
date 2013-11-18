@@ -23,6 +23,9 @@ class FrameInfo(object):
     return v
   def clear_block(self, bid):
     del self.block_frames[bid]
+  def __makefits__(self, other, context):
+    # This object is on program, make a dummy make fits so fitting won't fail
+    pass
 
 class BlockDecision(DecisionSet):
   def __init__(self):

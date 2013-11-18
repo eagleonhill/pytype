@@ -27,6 +27,7 @@ class CollectionGen(object):
   def __init__(self, collection, may_stop_iter = True):
     self.decision = CollectionDerefDecision(collection)
     self.may_stop_iter = may_stop_iter
+    notify_update(self)
   def __iter__(self):
     return self
   def next(self):

@@ -48,9 +48,9 @@ class CollectinValueTestCase(unittest.TestCase):
           hasint = True
         if isinstance(x, StringType):
           hasstr = True
-    self.assertEqual(path, 2)
     self.assertTrue(hasint)
     self.assertTrue(hasstr)
+    self.assertEqual(path, 2)
 
 if __name__ == '__main__':
   unittest.main()
