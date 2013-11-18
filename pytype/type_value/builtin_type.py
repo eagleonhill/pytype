@@ -93,18 +93,24 @@ class BuiltinObjInstance(BaseObject):
     assert type(self)._internal.check_value(value),\
         "Not accepting " + repr(value)
     self._value = value
-  def __makefits__(self, value):
+  def __makefits__(self, other, context):
     # Discard all compare history
-    if is_determined(self) and is_determined(value):
-      if self._value != value._value:
-        self._value = None
-      else:
-        return
-    self._value = None
-    try:
-      del self._CompareHistory__comparer
-    except AttributeError:
-      pass
+    if type(self) is not type(other):
+      context.fail()
+    data = context.get_data(other)
+    if is_determined(self) and self._value == data['_value']:
+      return
+    if not is_determined(self):
+      # TODO: Merge compare history
+      try:
+        del self._CompareHistory__comparer
+      except AttributeError:
+        pass
+      return
+    elif context.flags & context.FITS_BUILTIN_VALUE:
+      self._value = None
+    else:
+      context.fail()
   @classmethod
   def create_from_value(cls, value):
     assert cls._internal.check_value(value), \

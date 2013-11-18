@@ -139,7 +139,10 @@ class UndeterminedDict:
         self._maybeempty = False
         return True
 
-  def __makefits__(self, other):
+  def __makefits__(self, other, context):
+    # TODO: Stateful dict
+    raise NotImplementedError
+    """
     from ..makefits import type_make_fit, type_make_fit_internal
     if not self._typeinfo_only() and not other._typeinfo_only():
       if type_make_fit(self._items, other._items):
@@ -147,6 +150,7 @@ class UndeterminedDict:
     # Type info only
     self._items.clear()
     self.update(other)
+    """
 
 UndeterminedDict.__name__ = 'dict'
 defs.DictType = UndeterminedDict

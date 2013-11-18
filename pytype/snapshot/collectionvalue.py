@@ -1,10 +1,10 @@
 from .metaclass import SnapshotableMetaClass
-from .base import Immutable
+from .base import Snapshotable
 from .slist import SList
 from ..traced_frame import DecisionSet, TracedFrame
 from ..checker import raise_checker_error, notify_update
-from ..makefits import type_make_fit
 
+AGGRESSIVE_LIMIT = 5
 class CollectionDerefDecision(DecisionSet):
   def __init__(self, collection = None):
     self.index = 0
@@ -43,18 +43,61 @@ class CollectionGen(object):
     return self.may_stop_iter
   def __restore__(self, value, oldvalue=None):
     self.may_stop_iter = value
+  def __makefits__(self, other, context):
+    if self.decision is not other.decision:
+      context.fail()
+    v = context.get_data(other)
+    if v != self.may_stop_iter:
+      context.fail()
 
 class CollectionValue(object):
   def __init__(self, values=None):
     self.values = SList()
+    self._flags = 0
+    notify_update(self)
     if values:
       for v in values:
         self.addvalue(v)
-  def addvalue(self, value):
-    for v in self.values:
-      if type_make_fit(v, value):
-        return
-    self.values.append(value)
+  def _create_context(self):
+    from ..makefits import FittingContext
+    return FittingContext(self.flags)
+  def update_flag(self, context):
+    from ..makefits import FittingContext
+    new_flag = self.flags
+    if len(self.values) > AGGRESSIVE_LIMIT:
+      new_flag |= FittingContext.FITS_LIST | \
+          FittingContext.FITS_DICT | FittingContext.FITS_BUILTIN_VALUE
+    type(self).flags.fset(self, new_flag, context)
+  @property
+  def flags(self):
+    return self._flags
+
+  @flags.setter
+  def flags(self, value, context = None):
+    if value != self._flags:
+      self._flags = value
+      notify_update(self)
+      self.remerge_values(context)
+  def remerge_values(self, context):
+    v = list(self.values)
+    self.values[:] = []
+    for x in v:
+      self.addvalue(x, context)
+  def addvalue(self, value, context = None):
+    if context is None:
+      context = self._create_context()
+      old_flag = context.flags
+    else:
+      self.flags |= context.flags
+      old_flag = context.set_flags(self.flags)
+    try:
+      for v in self.values:
+        if context.try_fit(v, value):
+          return
+      self.values.append(value)
+      self.update_flag(context)
+    finally:
+      context.set_flags(old_flag)
   def deref(self):
     cur_frame = TracedFrame.current()
     assert cur_frame, 'Root frame is not set'
@@ -69,6 +112,17 @@ class CollectionValue(object):
     new.values = SList(self.values)
   def __repr__(self):
     return '{ValueSet: %s}' % ', '.join(repr(x) for x in self.values)
+  def __makefits__(self, other, context):
+    if not isinstance(other, CollectionValue):
+      context.fail()
+    self.flags = self.flags | context.get_data(other)
+    for v in context.get_data(other.values):
+      self.addvalue(v, context)
+  def __make__(self):
+    return self.flags
+  def __restore__(self, value, oldvalue = None):
+    self.flags = value
 
-Immutable.register(CollectionValue)
+Snapshotable.register(CollectionGen)
+Snapshotable.register(CollectionValue)
 __all__ = ['CollectionValue', 'CollectionGen', 'CollectionDerefDecision']

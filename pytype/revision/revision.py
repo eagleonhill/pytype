@@ -40,6 +40,14 @@ class Revision:
       if not self.back.__rollback_obj(obj, value):
         #print obj, 'not reverted from', self, value, self.back
         pass
+  def getstatefor(self, obj):
+    rev = self
+    while rev and id(obj) not in rev.objs:
+      rev = rev.back
+    if rev is None:
+      raise KeyError, obj
+    return rev.objs[id(obj)][1]
+
   def __rollback_obj(self, obj, curvalue):
     rev = self
     while rev and not id(obj) in rev.objs:

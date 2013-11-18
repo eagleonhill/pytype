@@ -3,7 +3,6 @@ import sys
 from .defs import *
 from . import defs
 from ..checker import reraise_error, get_current_frame, notify_update
-from ..makefits import type_make_fit_internal, type_make_fit
 from ..type_value import get_determined_value, is_determined
 from ..snapshot import SList, SnapshotableMetaClass, CollectionValue,\
     Immutable, Snapshotable
@@ -68,6 +67,10 @@ class ListUnderterminedState(ListState):
     if isinstance(index, slice):
       return self.list
     return self.value.deref()
+  def __make__(self):
+    return self.maybeempty
+  def __restore__(self, value, curvalue = None):
+    self.maybeempty = value
   def __setitem__(self, index, value):
     self.checkindex(index)
     if isinstance(index, slice):
@@ -134,12 +137,17 @@ class ListUnderterminedState(ListState):
   def sort(self, cmp=None, key=None, reserve=None): pass
   def index(self, item, i, j):
     return IntType.create_undetermined()
-  def __makefits__(self, other):
-    self.extend(other.list)
+  def __makefits__(self, other, context):
     if isinstance(other, ListUnderterminedState):
-      if other.maybeempty and not self.maybeempty:
+      context.fit(self.value, other.value)
+      if context.getdata(other) and not self.maybeempty:
         self.maybeempty = True
         notify_update(self)
+    elif isinstance(other, ListDerterminedState):
+      for v in context.get_data(other.data):
+        self.value.addvalue(v, context)
+    else:
+      context.fail()
 
 class ListDerterminedState(ListState):
   def __init__(self, list, values):
@@ -223,13 +231,16 @@ class ListDerterminedState(ListState):
     return self.data.count(item)
   def __nonzero__(self):
     return bool(self.data)
-  def __makefits__(self, other):
+  def __makefits__(self, other, context):
     fitted = False
     if isinstance(other, ListDerterminedState):
-      fitted = type_make_fit(self.data, other.data)
+      fitted = context.try_fit(self.data, other.data)
     if not fitted:
-      self.list._to_undetermined()
-      self.list._state.__makefits__(other)
+      if context.flags & context.FITS_LIST:
+        self.list._to_undetermined()
+        context.fit(self.list._state, other)
+      else:
+        context.fail()
 
 Immutable.register(ListDerterminedState)
 
@@ -297,9 +308,11 @@ class List(object):
   def index(self, item, i = IntType.create_from_value(0),\
       j = IntType.create_from_value(sys.maxint)):
     return self._state.index(item, i, j)
-  def __makefits__(self, other):
-    assert isinstance(other, List)
-    type_make_fit_internal(self._state, other._state)
+  def __makefits__(self, other, context):
+    if type(other) is not type(self):
+      context.fail()
+    state = context.get_data(other)
+    context.fit(self._state, state)
   def remove(self, item):
     i = self.index(item)
     del self[i]

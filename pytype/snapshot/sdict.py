@@ -36,10 +36,11 @@ class SDict(UserDict, Snapshotable):
     notify_update(self)
     return UserDict.popitem(self)
 
-  def __makefits__(self, other):
-    from ..makefits import FittingFailedException, \
-        type_make_fit_internal
+  def __makefits__(self, other, context):
+    if type(other) is not type(self):
+      context.fail()
+    other = context.get_data(other)
     if set(self.keys()) != set(other.keys()):
-      raise FittingFailedException
+      context.fail()
     for k in self.keys():
-      type_make_fit_internal(self[k], other[k])
+      context.fit(self[k], other[k])

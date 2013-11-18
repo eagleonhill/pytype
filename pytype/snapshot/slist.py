@@ -44,10 +44,11 @@ class SList(UserList, Snapshotable):
   def extend(self, other):
     notify_update(self)
     UserList.extend(self, other)
-  def __makefits__(self, other):
-    from ..makefits import FittingFailedException,\
-        type_make_fit_internal
-    if len(self) != len(other):
-      raise FittingFailedException
-    for a, b in zip(self.data, other.data):
-      type_make_fit_internal(a, b)
+  def __makefits__(self, other, context):
+    if type(other) is not type(self):
+      context.fail()
+    odata = context.get_data(other)
+    if len(self.data) != len(odata):
+      context.fail()
+    for a, b in zip(self.data, odata):
+      context.fit(a, b)

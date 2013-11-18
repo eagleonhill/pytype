@@ -2,62 +2,13 @@ from types import ClassType, InstanceType
 from ..checker import notify_update, attr_error, raise_checker_error
 from .base import Snapshotable, restore_as_dict
 
+def validate(defs):
+  if '__make__' in defs:
+    assert '__restore__' in defs
+    assert '__makefits__' in defs
+
 class SnapshotableMetaClass(type):
   __defining_baseobject = True
-  @staticmethod
-  def find_method(name, bases, defs):
-    f = defs.get(name)
-    if f is None:
-      for base in bases:
-        if hasattr(base, name):
-          f = getattr(base, name)
-          if f is not None:
-            break
-    return f
-
-  @staticmethod
-  def update_classobj(name, bases, defs):
-    f = SnapshotableMetaClass.find_method('__setattr__', bases, defs)
-    if f is not None:
-      # That's inefficient to track if __dict__ is changed in user-defined
-      # __setattr__, so always trigger notify_update
-      def __setattr__(self, key, value):
-        notify_update(self)
-        f(self, key, value)
-      defs['__setattr__'] = __setattr__
-    else:
-      def __setattr__(self, key, value):
-        notify_update(self)
-        self.__dict__[key] = value
-      defs['__setattr__'] = __setattr__
-    # Track when attribute is removed
-    d = SnapshotableMetaClass.find_method('__delattr__', bases, defs)
-    if d is not None:
-      def __delattr__(self, key):
-        notify_update(self)
-        d(self, key)
-      defs['__delattr__'] = __delattr__
-    else:
-      def __delattr__(self, key):
-        notify_update(self)
-        try:
-          del self.__dict__[key]
-        except KeyError:
-          attr_error(self, key)
-      defs['__delattr__'] = __delattr__
-
-    init = SnapshotableMetaClass.find_method('__init__', bases, defs)
-    # Track when instance is created, add it before any __init__ calls
-    if init is not None:
-      def __init__(self, *args, **kwds):
-        notify_update(self)
-        return init(self, *args, **kwds)
-      defs['__init__'] = __init__
-    else:
-      def __init__(self, *args, **kwds):
-        notify_update(self)
-      defs['__init__'] = __init__
-
   def __new__(cls, name, bases, defs):
     defs.setdefault('_SnapshotableMetaClass__builtin', False)
     if not SnapshotableMetaClass.__defining_baseobject:
@@ -65,6 +16,7 @@ class SnapshotableMetaClass(type):
         bases = bases + (BaseObject, )
     else:
       SnapshotableMetaClass.__defining_baseobject = False
+    validate(defs)
     t = super(SnapshotableMetaClass, cls).__new__(cls, name, bases, defs)
     return t
 
@@ -106,6 +58,17 @@ class BaseObject(object):
   def __restore__(self, value, cur):
     restore_as_dict(self, value, cur)
 
+  def __makefits__(self, other, context):
+    td, sd = self.__make__(), context.get_data(other)
+    if td is None or sd is None:
+      context.fail()
+    if td.keys() != sd.keys():
+      context.fail()
+    for x in td:
+      context.fit(td[x], sd[x])
+
 BaseObject._pytype_make_internal_type()
 
 Snapshotable.register(BaseObject)
+ 
+__all__ = ['BaseObject', 'SnapshotableMetaClass']

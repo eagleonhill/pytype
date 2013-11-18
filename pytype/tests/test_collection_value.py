@@ -6,22 +6,36 @@ from ..traced_frame import TracedFrame, FunctionDecision
 
 class CollectinValueTestCase(unittest.TestCase):
   def test_add(self):
-    i3 = IntType.create_from_value(3)
-    i2 = IntType.create_from_value(2)
+    i0 = IntType.create_from_value(0)
+    j0 = IntType.create_from_value(0)
     value = CollectionValue()
+    value.addvalue(i0)
+    value.addvalue(j0)
+    self.assertEqual(len(value.values), 1)
+    for i in range(1, 5):
+      x = IntType.create_from_value(i)
+      value.addvalue(x)
+      self.assertEqual(len(value.values), i + 1)
+    # Aggresive merge triggered
+    i2 = IntType.create_from_value(6)
     value.addvalue(i2)
-    value.addvalue(i3)
-    self.assertFalse(is_determined(i2))
     self.assertEqual(len(value.values), 1)
     value.addvalue(StringType.create_from_value('1231'))
     self.assertEqual(len(value.values), 2)
   def test_deref(self):
-    i3 = IntType.create_from_value(3)
-    i2 = IntType.create_from_value(2)
     value = CollectionValue()
-    value.addvalue(i2)
+    for i in range(5):
+      x = IntType.create_from_value(i)
+      value.addvalue(x)
+      self.assertEqual(len(value.values), i + 1)
+    path = 0
+    f = TracedFrame(FunctionDecision())
+    while f.next_path():
+      with f:
+        x = value.deref()
+        path += 1
+    self.assertEqual(path, 5)
     value.addvalue(StringType.create_from_value('1231'))
-    value.addvalue(i3)
     f = TracedFrame(FunctionDecision())
     path = 0
     hasint = False

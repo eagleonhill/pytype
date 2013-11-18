@@ -49,7 +49,11 @@ class SGen(object):
   def __restore__(self, value, oldvalue = None):
     #print 'restore', self.index, value
     self.index = value
-  def __makefits__(self, other):
-    raise FittingFailedException
+  def __makefits__(self, other, context):
+    if self is not other:
+      context.fail()
+    other_index = context.get_data(other)
+    if self.index != other.index:
+      context.fail()
 
 Snapshotable.register(SGen)
