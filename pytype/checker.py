@@ -75,3 +75,7 @@ def duplicated_path():
 
 def notify_update(obj):
   get_revision_manager().notify_update(obj)
+
+def assume(x):
+  if not x:
+    impossible_path()

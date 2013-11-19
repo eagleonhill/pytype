@@ -93,12 +93,19 @@ class ListUnderterminedState(ListState):
     self.checkindex(index)
     self.onremove()
   def count(self, item):
-    return IntType.create_undetermined()
+    v = IntType.create_undetermined()
+    assume(v >= IntType.create_from_value(0))
+    return v
   def pop(self, item):
     self.onremove()
     return self.value.deref()
   def __len__(self):
-    return IntType.create_undetermined()
+    v = IntType.create_undetermined()
+    if self.maybeempty:
+      assume(v >= IntType.create_from_value(0))
+    else:
+      assume(v > IntType.create_from_value(0))
+    return v
   def __iter__(self):
     return self.value.iterator(self.maybeempty)
   def append(self, value):

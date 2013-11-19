@@ -99,6 +99,6 @@ class FittingContext(object):
       get_revision_manager().set_rev(start_rev)
       return None
 
-def fit_obj(target, source, flags):
+def try_fit_obj(target, source, flags):
   context = FittingContext(flags)
   return context.try_fit(target, source)
