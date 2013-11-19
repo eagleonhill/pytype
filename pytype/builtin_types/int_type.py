@@ -7,6 +7,7 @@ intTypeBuilder = Type('int', (int, long), [
   Func('__truediv__', ['i'], 'f'),
   Func('__rtruediv__', ['i'], 'f'),
   Func('__nonzero__', [''], 'b'),
+  Func('__hash__', [''], 'i'),
 ])
 intTypeBuilder.rebuild(IntTypeInternal)
 

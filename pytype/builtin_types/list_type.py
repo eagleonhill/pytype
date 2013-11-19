@@ -234,7 +234,7 @@ class ListDerterminedState(ListState):
   def __repr__(self):
     return repr(self.data)
   def __len__(self):
-    return self.create_from_value(len(self.data))
+    return IntType.create_from_value(len(self.data))
   def count(self, item):
     # TODO: no-sideeffect compare
     return self.data.count(item)
@@ -303,7 +303,7 @@ class List(object):
   def append(self, element):
     self._state.append(element)
   def __len__(self):
-    return builitin_len(self._state)
+    return self._state.__len__()
   def __repr__(self):
     return repr(self._state)
   def __nonzero__(self):
@@ -331,6 +331,8 @@ class List(object):
     self._state.reverse()
   def sort(self, *args, **kwds):
     self._state.sort(*args, **kwds)
+
+  __hash__ = None
 
 List.__name__ = 'list'
 Snapshotable.register(List)

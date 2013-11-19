@@ -5,6 +5,7 @@ from ..type_value.builtin_type import is_determined, get_determined_value
 
 floatTypeBuilder = Type('float', (float, ), [
   Func('__nonzero__', [''], 'b'),
+  Func('__hash__', [''], 'i'),
 ])
 
 floatTypeBuilder.rebuild(FloatTypeInternal)

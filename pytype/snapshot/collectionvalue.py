@@ -45,7 +45,7 @@ class CollectionGen(object):
   def __restore__(self, value, oldvalue=None):
     self.may_stop_iter = value
   def __makefits__(self, other, context):
-    if self.decision is not other.decision:
+    if self is not other:
       context.fail()
     v = context.get_data(other)
     if v != self.may_stop_iter:
@@ -106,8 +106,8 @@ class CollectionValue(object):
       return cur_frame.get_next_decision(CollectionDerefDecision)
     cur_frame.add_decision(CollectionDerefDecision(self))
     return cur_frame.get_next_decision(CollectionDerefDecision)
-  def iterator(self, nonempty):
-    return CollectionGen(self, not nonempty)
+  def iterator(self, maybeempty):
+    return CollectionGen(self, not maybeempty)
   def clone(self):
     new = CollectionValue()
     new.values = SList(self.values)

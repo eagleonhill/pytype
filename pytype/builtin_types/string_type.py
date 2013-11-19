@@ -6,6 +6,7 @@ from ..type_value import is_determined, get_determined_value
 strType = Type('str', (str, ), [
   Func('__add__', ['s'], 's'),
   Func('__float__', [''], 'f'),
+  Func('__hash__', [''], 'i'),
   Func('__mul__', ['i'], 's'),
   #Func('__getitem__', ['i'], 's'),
   Func('capitalize', [''], 's'),

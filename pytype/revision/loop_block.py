@@ -1,4 +1,5 @@
 import random
+from itertools import chain
 from ..traced_frame import DecisionSet, TracedFrame
 from ..checker import get_program_frame, get_revision_manager,\
     raise_checker_error, reraise_error
@@ -15,7 +16,7 @@ LOOP_MERGE = [
 class LoopFrame(TracedFrame):
   def __init__(self, result=None):
     super(LoopFrame, self).__init__(result)
-    self.starts = []
+    self.starts_old = []
     self.starts_new = []
     self.cur_start = None
     self.merge_level = 0
@@ -24,16 +25,32 @@ class LoopFrame(TracedFrame):
       state.loop = 0
     else:
       state.loop = self.cur_start.loop + 1
-    self.update_merge_level(state.loop, len(self.starts))
-    for s in self.starts:
+    self.update_merge_level(state.loop, len(self.starts_old) +\
+        len(self.starts_new))
+    # Find exact same revs
+    for s in reversed(self.starts_old):
+      c = FittingContext(0)# LOOP_MERGE[self.merge_level][2])
+      newrev = c.try_fit_local_rev(state.rev, s.rev)
+      if newrev:
+        return
+    if self.merge_level != 0:
+      # Update current rev with previous ones
+      for s in self.starts_old:
+        c2 = FittingContext(LOOP_MERGE[self.merge_level][2])
+        newrev = c2.try_fit_local_rev(state.rev, s.rev)
+        if newrev:
+          state.rev = newrev
+    new = []
+    for s in self.starts_new:
+      # If an uncomputed rev can fits current one, ignore it.
       c = FittingContext(LOOP_MERGE[self.merge_level][2])
       newrev = c.try_fit_local_rev(state.rev, s.rev)
       if newrev:
-        s.rev = newrev
-        break
-    else:
-      self.starts.append(state)
-      self.starts_new.append(state)
+        state.rev = newrev
+      else:
+        new.append(s)
+    self.starts_new[:] = new
+    self.starts_new.append(state)
 
   def update_merge_level(self, loop, states):
     while self.merge_level + 1 < len(LOOP_MERGE):
@@ -57,6 +74,7 @@ class LoopFrame(TracedFrame):
     sid = min(range(len(self.starts_new)),\
         key=lambda x: self.starts_new[x].loop)
     self.cur_start = self.starts_new.pop(sid)
+    self.starts_old.append(self.cur_start)
     self.reset()
 
 class LoopState(object):
@@ -76,7 +94,8 @@ class LoopDecision(BlockDecision):
       self.finish()
       return True
     else:
-      return super(LoopDecision, self).on_exception(exc_type, exc_value, traceback)
+      return super(LoopDecision, self).on_exception(
+          exc_type, exc_value, traceback)
   def on_finish(self):
     self.need_new_state = True
 

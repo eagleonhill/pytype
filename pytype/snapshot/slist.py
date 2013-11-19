@@ -6,7 +6,7 @@ class SList(UserList, Snapshotable):
   def __make__(self):
     return list(self.data)
   def __restore__(self, value, oldvalue = None):
-    self.data = value
+    self.data = list(value)
 
   def __init__(self, initlist=None):
     notify_update(self)

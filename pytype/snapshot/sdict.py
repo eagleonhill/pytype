@@ -6,7 +6,7 @@ class SDict(UserDict, Snapshotable):
   def __make__(self):
     return dict(self.data)
   def __restore__(self, value, oldvalue = None):
-    self.data = value
+    self.data = dict(value)
 
   def __init__(self, initlist=None):
     notify_update(self)

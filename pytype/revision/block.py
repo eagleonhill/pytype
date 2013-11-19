@@ -1,5 +1,11 @@
 from ..traced_frame import DecisionSet, TracedFrame
 from ..checker import get_program_frame, get_revision_manager
+from ..makefits import FittingContext
+
+BLOCK_MERGE_LEVELS = [
+    (0, 0),
+    (13, FittingContext.FITS_ALL)
+]
 
 class FrameInfo(object):
   identifier = '__pytype_frame_info'
@@ -31,12 +37,27 @@ class BlockDecision(DecisionSet):
   def __init__(self):
     self.result = []
     self.index = 0
+    self.merge_level = 0
   def on_finish(self):
     self.finish()
   def finish(self):
     rev = self.get_rev()
-    #print 'finish block', rev
+    new = []
+    for exc_type, exc_value, traceback, orev in self.result:
+      if exc_type is not None:
+        continue
+      c = FittingContext(BLOCK_MERGE_LEVELS[self.merge_level][1])
+      newrev = c.try_fit_local_rev(rev, orev)
+      if newrev:
+        rev = newrev
+      else:
+        new.append((None, None, None, orev))
+    self.result[:] = new
     self.result.append((None, None, None, rev))
+    self.update_merge_level()
+  def update_merge_level(self):
+    # TODO: Need to check non-exception revs and exception revs.
+    pass
   def on_exception(self, exc_type, exc_value, traceback):
     revision = self.get_rev()
     self.result.append((exc_type, exc_value, traceback, revision))
