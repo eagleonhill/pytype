@@ -29,7 +29,9 @@ class RevisionManager(object):
     self.rev_id += 1
     return self.rev_id
 
-  def commit(self):
+  def commit(self, force = False):
+    if not force and self.is_clean:
+      return self.cur_rev
     from .revision import Revision
     self.commiting = True
     new_rev = Revision(self.cur_rev, self)
@@ -45,7 +47,7 @@ class RevisionManager(object):
     self.commiting = False
     return new_rev
   def commit_local(self):
-    rev = self.commit()
+    rev = self.commit(True)
     f = get_program_frame()
     rev.local = dict(f.f_locals)
     rev.code = f.f_code
@@ -106,7 +108,7 @@ class RevisionManager(object):
     """Discard all uncommited changes"""
     if not self.is_clean:
       #print 'Discarding all changes'
-      rev = self.commit()
+      rev = self.commit(True)
       self.pop()
 
   @property
