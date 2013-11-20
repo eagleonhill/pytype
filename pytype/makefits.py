@@ -72,7 +72,6 @@ class FittingContext(object):
       self.fit(target, source)
       return True
     except FittingFailedException:
-      get_revision_manager().discard()
       get_revision_manager().set_rev(start_rev)
       return False
   def get_data(self, obj):
@@ -95,7 +94,6 @@ class FittingContext(object):
         self.fit(rev.local[k], otherrev.local[k])
       return get_revision_manager().commit_local()
     except FittingFailedException:
-      get_revision_manager().discard()
       get_revision_manager().set_rev(start_rev)
       return None
 

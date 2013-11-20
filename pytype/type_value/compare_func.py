@@ -1,6 +1,6 @@
 from . import checker
-from ..snapshot import SIDWeakKeyDictionary, SDict,\
-    SnapshotableMetaClass
+from ..snapshot import SIDWeakKeyDictionary, SDict, BaseObject
+from ..traced_frame import TracedFunction
 from .builtin_type import get_determined_value, is_determined, BuiltinObjInstance
 from .func_type import StubFunc
 from ..builtin_types.defs import IntType, FloatType
@@ -13,8 +13,7 @@ LE = 0b011
 GE = 0b110
 ALL = 0b111
 
-class CompareHistory:
-  __metaclass__ = SnapshotableMetaClass
+class CompareHistory(BaseObject):
   inverse_op = {
       '__eq__': '__eq__',
       '__ne__': '__ne__',
@@ -32,6 +31,7 @@ class CompareHistory:
       '__gt__': GT,
       }
   @classmethod
+  @TracedFunction
   def get_comparer(cls, value):
     try:
       return value.__comparer

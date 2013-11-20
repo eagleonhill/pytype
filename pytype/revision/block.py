@@ -70,7 +70,6 @@ class BlockDecision(DecisionSet):
     self.index += 1
   def current(self):
     exc_type, exc_value, traceback, revision = self.result[self.index]
-    get_revision_manager().discard()
     #print 'set local', revision
     get_revision_manager().set_local(revision)
     if exc_type:

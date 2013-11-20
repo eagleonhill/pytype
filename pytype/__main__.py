@@ -32,9 +32,11 @@ mod = compile(exc, mainpyfile, 'exec')
 result = FunctionDecision()
 frame = TracedFrame(result, topmost = True)
 
-while frame.next_path():
-  g = hook_builtins.get_globals('__main__')
-  with frame:
-    exec mod in g
-frame.result.dump_exceptions(hide_internal=True)
-os.remove(path)
+try:
+  while frame.next_path():
+    g = hook_builtins.get_globals('__main__')
+    with frame:
+      exec mod in g
+  frame.result.dump_exceptions(hide_internal=True)
+finally:
+  os.remove(path)

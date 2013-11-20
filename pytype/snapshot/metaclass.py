@@ -1,6 +1,7 @@
 from types import ClassType, InstanceType
 from ..checker import notify_update, attr_error, raise_checker_error
 from .base import Snapshotable, restore_as_dict, create_object
+from ..traced_frame import TracedFunction
 
 def validate(defs):
   if '__make__' in defs:
@@ -30,12 +31,33 @@ class SnapshotableMetaClass(type):
   def _pytype_make_internal_type(self):
     self.__builtin = True
 
+  @TracedFunction
+  def __call__(self, *args, **kwds):
+    v = super(SnapshotableMetaClass, self).__call__(*args, **kwds)
+    notify_update(v)
+    return v
+    """
+    if self.__dict__.get('__nosnapshot_new__'):
+      return v
+    from ..traced_frame import TracedFrame, FunctionDecision
+    curframe = TracedFrame.current(True)
+    if not curframe:
+      v = super(SnapshotableMetaClass, self).__call__(*args, **kwds)
+      notify_update(v)
+      return v
+    if not curframe.has_more_decisions():
+      result = FunctionDecision()
+      v = super(SnapshotableMetaClass, self).__call__(*args, **kwds)
+      notify_update(v)
+      result.add_return_value(v)
+      curframe.add_decision(result)
+    value = curframe.get_next_call_decision()
+    assert type(value) == self, (type(value), self)
+    return value
+    """
+
 class BaseObject(object):
   __metaclass__ = SnapshotableMetaClass
-  def __new__(cls, *args, **kwds):
-    x = create_object(BaseObject, cls)
-    notify_update(x)
-    return x
   def __setattr__(self, key, value):
     notify_update(self)
     super(BaseObject, self).__setattr__(key, value)

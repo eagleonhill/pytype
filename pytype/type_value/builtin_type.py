@@ -1,7 +1,7 @@
 from .base import *
 from .. import checker
 from ..snapshot import SnapshotableMetaClass, Snapshotable, Immutable,\
-    BaseObject
+    BaseObject, create_object
 
 # Implementation of type in C
 class BuiltinTypeInternal(Immutable):
@@ -72,7 +72,6 @@ class BuiltinTypeInternal(Immutable):
 
 # Instance of builtin type, contains no public values
 class BuiltinObjInstance(BaseObject):
-  __metaclass__ = SnapshotableMetaClass
   def _pytypecheck_get_value(self):
     return self._value
   def _pytypecheck_is_determined(self):
@@ -103,7 +102,8 @@ class BuiltinObjInstance(BaseObject):
     if not is_determined(self):
       # TODO: Merge compare history
       try:
-        del self._CompareHistory__comparer
+        if self is not other:
+          del self._CompareHistory__comparer
       except AttributeError:
         pass
       return
@@ -115,12 +115,12 @@ class BuiltinObjInstance(BaseObject):
   def create_from_value(cls, value):
     assert cls._internal.check_value(value), \
         "{0} don't accept type {1}".format(cls, value)
-    v = super(BuiltinObjInstance, cls).__new__(cls)
+    v = create_object(BuiltinObjInstance, cls)
     v._value = value
     return v
   @classmethod
   def create_undetermined(cls):
-    v = super(BuiltinObjInstance, cls).__new__(cls)
+    v = create_object(BuiltinObjInstance, cls)
     v._value = None
     return v
 

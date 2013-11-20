@@ -40,8 +40,8 @@ class RevisionManager(object):
         key, obj = self.changed_objs.popitem()
       except KeyError: # Key may be deleted while popping
         break
+      #print new_rev, 'contains', obj, type(obj)
       new_rev.take_snapshot(obj)
-      #print obj.__class__, 'commited'
     #print 'Commit from', self.cur_rev, 'to', new_rev
     self.cur_rev = new_rev
     self.commiting = False
@@ -74,6 +74,8 @@ class RevisionManager(object):
     return cp.pop()
 
   def set_rev(self, rev, setlocal = False):
+    if not self.is_clean:
+      self.discard()
     if self.cur_rev != rev:
       #print 'Setting rev to', rev
       lcp = self.lcp(rev, self.cur_rev)

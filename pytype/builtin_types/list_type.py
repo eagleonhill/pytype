@@ -7,6 +7,7 @@ from ..type_value import get_determined_value, is_determined
 from ..snapshot import SList, CollectionValue, Immutable, Snapshotable,\
     create_object
 
+notgiven = object()
 class ListState:
   __metaclass__ = ABCMeta
   @abstractmethod
@@ -280,6 +281,9 @@ class List(object):
     if isinstance(iterable, List):
       self._state = iterable._state.copy(self)
       notify_update(self)
+    if isinstance(iterable, (list, tuple, str)):
+      self._state = ListDerterminedState(self, iterable)
+      notify_update(self)
     else:
       self._state = ListDerterminedState(self, None)
       notify_update(self)
@@ -337,10 +341,15 @@ class List(object):
     self._state = value
   def insert(self, index, item):
     self._state.insert(index, item)
-  def pop(self, index = IntType.create_from_value(-1)):
+  def pop(self, index = notgiven):
+    if index is notgiven:
+      index = IntType.create_from_value(-1)
     return self._state.pop(index)
-  def index(self, item, i = IntType.create_from_value(0),\
-      j = IntType.create_from_value(sys.maxint)):
+  def index(self, item, i = notgiven, j = notgiven):
+    if i is notgiven:
+      i = IntType.create_from_value(0)
+    if j is notgiven:
+      j = IntType.create_from_value(sys.maxint)
     return self._state.index(item, i, j)
   def __makefits__(self, other, context):
     if type(other) is not type(self):

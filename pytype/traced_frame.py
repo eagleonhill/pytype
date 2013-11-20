@@ -1,6 +1,7 @@
 from . import checker
 from .checker import raise_checker_error, get_revision_manager
 from threading import local
+from functools import wraps
 
 class TracedFrame(object):
   """
@@ -13,7 +14,7 @@ class TracedFrame(object):
   def current(canbeempty = False):
     c = TracedFrame._frame_local.current
     if not canbeempty:
-      assert c
+      assert c, 'Top frame is not set'
     return c
 
   @staticmethod
@@ -78,7 +79,8 @@ class TracedFrame(object):
     return d.current()
   def get_next_bool_decision(self):
     if not self.has_more_decisions():
-      self.add_decision(BooleanDecision())
+      rev = get_revision_manager().commit()
+      self.add_decision(BooleanDecision(rev))
     return self.get_next_decision(BooleanDecision)
   def get_next_call_decision(self):
     return self.get_next_decision(FunctionDecision)
@@ -119,13 +121,15 @@ class DecisionSet(object):
     pass
 
 class BooleanDecision(DecisionSet):
-  def __init__(self):
+  def __init__(self, rev):
     self.value = False
+    self.rev = rev
   def has_next(self):
     return self.value == False
   def goto_next(self):
     self.value = True
   def current(self):
+    get_revision_manager().set_rev(self.rev)
     return self.value
 
 class FunctionDecision(DecisionSet):
@@ -219,10 +223,10 @@ class FunctionDecision(DecisionSet):
       return None
   def set_rev(self, revision):
     if self.sideeffect:
-      get_revision_manager().discard()
       get_revision_manager().set_rev(revision)
 
 def TracedFunction(func):
+  @wraps(func)
   def traced_func_call(*args, **kargs):
     cur_frame = TracedFrame.current()
     assert cur_frame, 'Root frame is not set'

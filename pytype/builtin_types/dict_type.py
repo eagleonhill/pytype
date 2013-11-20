@@ -423,6 +423,7 @@ class Dict(object):
 
   @classmethod
   def _from_kwargs(cls, args):
+    assert type(args) is dict
     d = cls()
     for key, value in args.iteritems():
       d[StringType.create_from_value(key)] = value
@@ -432,7 +433,7 @@ class Dict(object):
     if not self._determined():
       raise_checker_error(ValueError, 'Expecting determined keys in kwargs')
     d = {}
-    for key, value in self._items.itervalues():
+    for key, value in self.iteritems():
       if not isinstance(key, StringType):
         type_error(key, StringType)
       d[get_determined_value(key)] = value

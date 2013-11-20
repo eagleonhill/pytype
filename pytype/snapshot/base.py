@@ -1,6 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from types import InstanceType
 from weakref import ref
+from ..checker import notify_update
+from ..traced_frame import TracedFunction
 
 class Snapshotable(object):
   __metaclass__ = ABCMeta
@@ -64,14 +66,6 @@ def restore_as_dict(obj, value, cur = None):
   for key, v in value.iteritems():
     setattr(obj, key, v)
 
+@TracedFunction
 def create_object(mytype, cls, *args, **kwds):
-  from ..traced_frame import TracedFrame, FunctionDecision
-  curframe = TracedFrame.current(True)
-  if not curframe:
-    # This is possible when initialize. Will only create primitive values
-    return super(mytype, cls).__new__(cls)
-  if not curframe.has_more_decisions():
-    result = FunctionDecision(sideeffect = False)
-    result.add_return_value(super(mytype, cls).__new__(cls, *args, **kwds))
-    curframe.add_decision(result)
-  return curframe.get_next_call_decision()
+  return super(mytype, cls).__new__(cls, *args, **kwds)
