@@ -1,6 +1,6 @@
 from types import ClassType, InstanceType
 from ..checker import notify_update, attr_error, raise_checker_error
-from .base import Snapshotable, restore_as_dict
+from .base import Snapshotable, restore_as_dict, create_object
 
 def validate(defs):
   if '__make__' in defs:
@@ -33,7 +33,7 @@ class SnapshotableMetaClass(type):
 class BaseObject(object):
   __metaclass__ = SnapshotableMetaClass
   def __new__(cls, *args, **kwds):
-    x = super(BaseObject, cls).__new__(cls, *args, **kwds)
+    x = create_object(BaseObject, cls)
     notify_update(x)
     return x
   def __setattr__(self, key, value):

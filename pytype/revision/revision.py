@@ -57,5 +57,5 @@ class Revision:
       return True
     else:
       return False
-  def __str__(self):
+  def __repr__(self):
     return '<revision %d>' % self.id

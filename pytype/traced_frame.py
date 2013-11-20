@@ -10,18 +10,24 @@ class TracedFrame(object):
   _frame_local = local()
   _frame_local.current = None
   @staticmethod
-  def current():
-    return TracedFrame._frame_local.current
+  def current(canbeempty = False):
+    c = TracedFrame._frame_local.current
+    if not canbeempty:
+      assert c
+    return c
+
   @staticmethod
   def set_current(value):
     TracedFrame._frame_local.current = value
-  def __init__(self, result = None):
+  def __init__(self, result = None, topmost=False):
     self.decision_list = None
     self.decision_made = 0
     self.result = result
-    self.back = self.current()
+    self.back = self.current(topmost)
+    if topmost:
+      assert self.back is None
   def __enter__(self):
-    assert self.current() == self.back
+    assert self.current(True) == self.back
     self.running = True
     self.set_current(self)
   def __exit__(self, exc_type, exc_value, traceback):

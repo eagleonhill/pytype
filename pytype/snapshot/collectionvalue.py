@@ -107,7 +107,7 @@ class CollectionValue(object):
     cur_frame.add_decision(CollectionDerefDecision(self))
     return cur_frame.get_next_decision(CollectionDerefDecision)
   def iterator(self, maybeempty):
-    return CollectionGen(self, not maybeempty)
+    return CollectionGen(self, maybeempty)
   def clone(self):
     new = CollectionValue()
     new.values = SList(self.values)

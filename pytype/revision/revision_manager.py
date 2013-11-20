@@ -129,6 +129,8 @@ class LocalLoader(object):
     self.frame = frame
   def setup(self):
     self.old_ftrace = self.frame.f_trace
+    if isinstance(self.old_ftrace, LocalLoader) or self.old_ftrace is None:
+      self.old_ftrace = self.defaultTrace
     self.set = False
     self.frame.f_trace = self
   def __call__(self, f, event, arg):
@@ -136,8 +138,7 @@ class LocalLoader(object):
       assert False
       return self.old_trace(f, event, arg) if self.old_trace else None
     assert f == self.frame
-    if self.set:
-      return
+    assert not self.set
     backup = {}
     d = f.f_locals
     for name in d:
@@ -150,9 +151,8 @@ class LocalLoader(object):
     end = [x for x in d.keys() if not x.startswith('_')]
     #print self.rev, before, end
     self.set = True
-    if self.old_ftrace:
-      ret = self.old_ftrace(f, event, arg)
-    else:
+    ret = self.old_ftrace(f, event, arg)
+    if ret is None:
       ret = self.old_ftrace
     return ret
 sys.settrace(LocalLoader.defaultTrace)

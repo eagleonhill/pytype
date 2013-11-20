@@ -1,4 +1,3 @@
-import sys
 def raise_checker_error(exc_type, exc_value = None, traceback=None):
   # If traceback is given, raise_checker_error is not in traceback
   do_raise_checker_error(exc_type, exc_value, traceback)
@@ -59,6 +58,7 @@ def get_current_frame():
   from .traced_frame import TracedFrame
   return TracedFrame.current()
 def get_program_frame(start = None):
+  import sys
   if start is None:
     start = sys._getframe(0)
   while is_internal_frame(start):
@@ -79,3 +79,29 @@ def notify_update(obj):
 def assume(x):
   if not x:
     impossible_path()
+
+sandbox_global = {}
+
+def run_in_sandbox(func, local):
+  from .traced_frame import FunctionDecision, TracedFrame
+  curframe = TracedFrame.current()
+  if not curframe.has_more_decisions():
+    if not sandbox_global:
+      import hook_exports, hook_builtins
+      sandbox_global.update(\
+          hook_builtins.get_globals('pytypechecker_internal', '<dynamic>'))
+    g = dict(sandbox_global)
+    if local:
+      g.update(local)
+
+    result = FunctionDecision()
+    frame = TracedFrame(result)
+    rev = get_revision_manager().commit()
+
+    l = {}
+    while frame.next_path():
+      with frame:
+        get_revision_manager().set_rev(rev)
+        exec(func.__code__, g, l)
+        result.add_return_value(None)
+  curframe.get_next_decision(FunctionDecision)

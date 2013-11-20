@@ -30,7 +30,7 @@ print exc
 
 mod = compile(exc, mainpyfile, 'exec')
 result = FunctionDecision()
-frame = TracedFrame(result)
+frame = TracedFrame(result, topmost = True)
 
 while frame.next_path():
   g = hook_builtins.get_globals('__main__')

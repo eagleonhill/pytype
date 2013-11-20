@@ -6,7 +6,8 @@ from .hashable import Hash
 from ..checker import raise_checker_error, reraise_error, fork, assume,\
     notify_update
 from ..type_value import get_determined_value, is_determined
-from ..snapshot import SDict, Snapshotable, Immutable, CollectionValue
+from ..snapshot import SDict, Snapshotable, Immutable, CollectionValue,\
+    create_object
 from ..makefits import try_fit_obj
 
 notgiven = object()
@@ -84,7 +85,8 @@ class DictUndeterminedState(DictState):
     self.maybeempty = False
     notify_update(self)
     if iterable:
-      for key, v in iterable:
+      assert isinstance(iterable, DictDeterminedState)
+      for key, v in iterable.iteritems():
         self[key] = v
 
   def onadd(self):
@@ -330,8 +332,21 @@ class DictDeterminedState(DictState):
   def __str__(self):
     return str(self.data)
 
+def _dict_init_from_iterable():
+  s = self
+  while __hook_exports__.do_for(1, lambda: iterable):
+    with __hook_exports__.frame(1):
+      try:
+        key, value = __hook_exports__.for_next(1)
+      except StopIteration:
+        __hook_exports__.loop_break()
+      s[key] = value
+      del key, value
 class Dict(object):
   __slots__ = ['_state', '__weakref__']
+  def __new__(cls, iterable = None):
+    return create_object(Dict, cls)
+
   def __init__(self, iterable = None):
     notify_update(self)
     if isinstance(iterable, Dict):
@@ -342,9 +357,9 @@ class Dict(object):
         for x in iterable:
           self[x] = iterable[x]
       elif iterable is not None:
-        for a, b in iterable:
-          self[a] = b
-
+        self._init_from_iterable(iterable)
+  def _init_from_iterable(self, iterable):
+    run_in_sandbox(_dict_init_from_iterable, locals())
   def __setitem__(self, key, value):
     self._state[key] = value
 
@@ -439,7 +454,7 @@ class Dict(object):
 
   def _to_undetermined(self):
     if self._determined():
-      self._state = DictUndeterminedState(self, self._state.iteritems())
+      self._state = DictUndeterminedState(self, self._state)
       notify_update(self)
 
   def __make__(self):

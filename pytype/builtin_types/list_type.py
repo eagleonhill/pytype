@@ -2,10 +2,10 @@ from abc import abstractmethod, ABCMeta
 import sys
 from .defs import *
 from . import defs
-from ..checker import reraise_error, get_current_frame, notify_update
+from ..checker import reraise_error, notify_update, run_in_sandbox, assume
 from ..type_value import get_determined_value, is_determined
-from ..snapshot import SList, SnapshotableMetaClass, CollectionValue,\
-    Immutable, Snapshotable
+from ..snapshot import SList, CollectionValue, Immutable, Snapshotable,\
+    create_object
 
 class ListState:
   __metaclass__ = ABCMeta
@@ -140,6 +140,7 @@ class ListUnderterminedState(ListState):
     new = ListUnderterminedState(list)
     new.value = self.value.clone()
     new.maybeempty = self.maybeempty
+    notify_update(new)
     return new
   def __repr__(self):
     return '{%slist: %s}' %\
@@ -260,18 +261,33 @@ class ListDerterminedState(ListState):
 
 Immutable.register(ListDerterminedState)
 
+def _from_iterable_func():
+  s = self
+  while __hook_exports__.do_for(1, lambda: iterable):
+    with __hook_exports__.frame(1):
+      try:
+        v = __hook_exports__.for_next(1)
+      except StopIteration:
+        __hook_exports__.loop_break()
+      s.append(v)
+      del v
+
 class List(object):
   __slots__ = ['_state', '__weakref__']
+  def __new__(cls, iterable = None):
+    return create_object(List, cls)
   def __init__(self, iterable = None):
     if isinstance(iterable, List):
       self._state = iterable._state.copy(self)
-    elif iterable is None:
-      self._state = ListDerterminedState(self, [])
+      notify_update(self)
     else:
-      # TODO: process undetermined iterable
-      self._state = ListDerterminedState(self, iterable)
-    notify_update(self)
+      self._state = ListDerterminedState(self, None)
+      notify_update(self)
+      if iterable is not None:
+        self._init_from_iterable(iterable)
 
+  def _init_from_iterable(self, iterable):
+    run_in_sandbox(_from_iterable_func, locals())
   def __getitem__(self, index):
     return self._state[index]
 

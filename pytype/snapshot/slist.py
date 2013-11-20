@@ -1,8 +1,10 @@
 from UserList import UserList
-from .base import Snapshotable
+from .base import Snapshotable, create_object
 from ..checker import notify_update
 
 class SList(UserList, Snapshotable):
+  def __new__(cls, iterable = None):
+    return create_object(SList, cls)
   def __make__(self):
     return list(self.data)
   def __restore__(self, value, oldvalue = None):
