@@ -156,7 +156,7 @@ class CompareHistory(BaseObject):
         'Comparing determined object'
     if is_determined(self.value):
       return self.get_comparer(other).compare(
-          self.value, inverse_op[operator])
+          self.value, CompareHistory.inverse_op[operator])
     if is_determined(other):
       return self.compare_constant(get_determined_value(other), operator)
     else:

@@ -3,8 +3,6 @@ from .base import Snapshotable, create_object
 from ..checker import notify_update
 
 class SDict(UserDict, Snapshotable):
-  def __new__(cls, iterable = None):
-    return create_object(SDict, cls)
   def __make__(self):
     return dict(self.data)
   def __restore__(self, value, oldvalue = None):

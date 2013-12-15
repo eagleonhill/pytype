@@ -322,7 +322,7 @@ class List(object):
   def _to_determined(self, values):
     if self._determined():
       return
-    self._state = SList(values)
+    self._state = ListDerterminedState(values)
     notify_update(self)
   def _determined(self):
     return isinstance(self._state, ListDerterminedState)

@@ -75,7 +75,8 @@ class TracedFrame(object):
     assert self.has_more_decisions()
     d = self.pop_decision()
     if typecheck is not None:
-      assert isinstance(d, typecheck)
+      assert isinstance(d, typecheck),\
+          '%s expected, got %s' % (typecheck, type(d))
     return d.current()
   def get_next_bool_decision(self):
     if not self.has_more_decisions():
@@ -88,9 +89,9 @@ class TracedFrame(object):
     assert not self.has_more_decisions()
     self.decision_list.append(decision)
   def impossible_path(self):
-    raise TracedSection.ImpossiblePathError()
+    raise TracedFrame.ImpossiblePathError()
   def duplicated_path(self):
-    raise TracedSection.DuplicatedPathError()
+    raise TracedFrame.DuplicatedPathError()
   def has_more_decisions(self):
     return self.decision_made < len(self.decision_list)
   def pop_decision(self):
@@ -137,6 +138,7 @@ class FunctionDecision(DecisionSet):
     self.return_values = []
     self.exceptions = []
     self.sideeffect = sideeffect
+    self.func = None
     if self.sideeffect:
       self.start_revision = get_revision_manager().commit()
     self.index = 0
@@ -225,6 +227,10 @@ class FunctionDecision(DecisionSet):
     if self.sideeffect:
       get_revision_manager().set_rev(revision)
 
+  def __repr__(self):
+    return 'Func decision %s, returns %s' % (
+        self.func.__name__, [x[0] for x in self.return_values])
+
 def TracedFunction(func):
   @wraps(func)
   def traced_func_call(*args, **kargs):
@@ -233,6 +239,7 @@ def TracedFunction(func):
     if cur_frame.has_more_decisions():
       return cur_frame.get_next_call_decision()
     frame = TracedFrame(FunctionDecision())
+    frame.result.func = func
     rev = get_revision_manager().commit()
     while frame.next_path():
       with frame:

@@ -89,8 +89,12 @@ class LoopDecision(BlockDecision):
   def __init__(self):
     super(LoopDecision, self).__init__()
     self.need_new_state = True
+    self.key = None
   def on_exception(self, exc_type, exc_value, traceback):
     if exc_type is LoopFinished:
+      if self.key is not None:
+        pf = get_program_frame()
+        del pf.f_locals[self.key]
       self.finish()
       return True
     else:
@@ -120,11 +124,16 @@ def do_while(bid):
     return False
 
 def do_for(bid, itergen):
-  if block_done(bid):
+  cur = TracedFrame.current()
+  if cur.has_more_decisions():
+    it = itergen().__iter__()
+    cur.get_next_decision(BlockDecision)
     return False
+
   def init():
     from ..snapshot import Snapshotable, SGen
     t = LoopFrame(LoopDecision())
+    t.bid = bid
     it = itergen().__iter__()
     if not isinstance(it, Snapshotable):
       it = SGen(it)
@@ -146,7 +155,6 @@ def do_for(bid, itergen):
     get_revision_manager().set_local(f.cur_start.rev)
     return True
   else:
-    del pf.f_locals[f.result.key]
     fi.clear_block(bid)
     assert block_done(bid)
     return False

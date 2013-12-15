@@ -22,11 +22,11 @@ sys.path[0] = os.path.dirname(mainpyfile)
 
 exc = transform(open(mainpyfile).read(), mainpyfile)
 
-exc = to_source(exc, '  ', True)
+exc = to_source(exc, '  ', False)
 tmpf, path = tempfile.mkstemp(suffix='.py', text=True)
 os.fdopen(tmpf, 'w').write(exc)
 mainpyfile = path
-print exc
+#print exc
 
 mod = compile(exc, mainpyfile, 'exec')
 result = FunctionDecision()
@@ -39,4 +39,5 @@ try:
       exec mod in g
   frame.result.dump_exceptions(hide_internal=True)
 finally:
-  os.remove(path)
+  #os.remove(path)
+  pass
